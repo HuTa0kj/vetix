@@ -121,6 +121,12 @@ output/
 
 ![](./images/report.png)
 
+## Agent Tracing
+
+After configuring your [LangSmith](https://smith.langchain.com/) key in config.yaml, you can track agents. You can see all the tool calls and details.
+
+![](./images/langsmith.png)
+
 ## Tech Stack
 
 - **LangGraph** — Workflow orchestration
