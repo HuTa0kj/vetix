@@ -11,6 +11,7 @@ class SkillSafeAuditState(BaseModel):
     messages: Annotated[list[AnyMessage], add_messages] = Field(default_factory=list)
     skill_dir: str
     skill_name: str = ""
+    project_structure: dict = Field(default_factory=dict)
     has_scripts: bool = False
     skill_summary_report: str = ""
     skill_code_audit_report: str = ""
