@@ -7,11 +7,13 @@ from skill_scanner.skill_audit.state import SkillSafeAuditState
 from skill_scanner.skill_audit.nodes.get_base_info import gather_base_info
 from skill_scanner.skill_audit.nodes.skill_summary import skill_summary
 from skill_scanner.skill_audit.nodes.code_audit import audit_scripts
+from skill_scanner.utils.logger import logger
 
 
 def _should_skip_on_error(state: SkillSafeAuditState) -> str:
     """If an error occurs in the middle of the workflow, it will end immediately."""
     if state.error:
+        logger.error(state.error)
         return "end"
     return "next"
 
