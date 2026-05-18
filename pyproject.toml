@@ -12,6 +12,7 @@ dependencies = [
     "deepagents>=0.6.1",
     "langchain-core>=1.4.0",
     "langchain-openai>=1.2.1",
+    "pstruc>=1.0.1",
     "rich>=13.0.0",
     "typer>=0.25.1",
 ]
