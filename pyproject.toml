@@ -3,14 +3,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "skill-scanner-agent"
-version = "1.0.0"
-description = "Skill Scan Agent — Automated scanning, identification, and assessment of SKILL security risks."
+name = "vetix"
+dynamic = ["version"]
+description = "Vetix — Automated scanning, identification, and assessment of SKILL security risks."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "deepagents>=0.6.1",
-    "langchain-core>=1.4.0",
+    "deepagents>=0.6.12",
+    "langchain-core>=1.4.8",
     "langchain-openai>=1.2.1",
     "pstruc>=1.0.1",
     "rich>=13.0.0",
@@ -18,7 +18,10 @@ dependencies = [
 ]
 
 [project.scripts]
-skill-scanner = "skill_scanner.cli:app"
+vetix = "vetix.cli:app"
+
+[tool.hatch.version]
+path = "vetix/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["skill_scanner"]
+packages = ["vetix"]
