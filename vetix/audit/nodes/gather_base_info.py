@@ -81,7 +81,35 @@ def _get_skill_structure(path: str) -> dict:
             "Thumbs.db", "*.pyo", "*.so", "*.dll", "*.tmp",
         ]
     )
-    return structure
+    raw_structure = structure.get("structure", {})
+    return _enrich_tree_with_line_counts(raw_structure, path)
+
+
+def _enrich_tree_with_line_counts(structure: dict, root_path: str) -> dict:
+    """The number of additional lines is added to each file node of project_structure recursively.
+
+    Args:
+        structure: `get_project_tree` returns the original directory structure (dict).
+        root_path: The absolute directory path of the current layer
+
+    Returns:
+        A new dict where the leaf nodes change from None to {"line_count": N}
+    """
+    enriched = {}
+    for key, value in structure.items():
+        if isinstance(value, dict):
+            sub_root = os.path.join(root_path, key)
+            enriched[key] = _enrich_tree_with_line_counts(value, sub_root)
+        else:
+            # value 为 None — 表示文件（pstruc 用 None 标记文件节点），替换为 {"line_count": N}
+            file_full_path = os.path.join(root_path, key)
+            try:
+                with open(file_full_path, "r") as f:
+                    line_count = sum(1 for _ in f)
+            except Exception:
+                line_count = 0
+            enriched[key] = {"line_count": line_count}
+    return enriched
 
 
 def _is_single_skill_file(file_path: str) -> bool:
