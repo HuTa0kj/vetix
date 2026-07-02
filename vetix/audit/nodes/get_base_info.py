@@ -2,10 +2,10 @@ import os
 
 from pstruc import get_project_structure
 
-from skill_scanner.skill_audit.state import SkillSafeAuditState
-from skill_scanner.utils.utils import nodes_error
-from skill_scanner.utils.logger import logger
-from skill_scanner.config import read_config
+from vetix.audit.state import SkillSafeAuditState
+from vetix.utils.utils import nodes_error
+from vetix.utils.logger import logger
+from vetix.config import read_config
 
 
 async def gather_base_info(state: SkillSafeAuditState) -> dict:
@@ -40,6 +40,7 @@ async def gather_base_info(state: SkillSafeAuditState) -> dict:
 
 def _get_skill_name(path: str) -> str | None:
     """
+    Get the name of SKILL
 
     Args:
         path: SKILL path

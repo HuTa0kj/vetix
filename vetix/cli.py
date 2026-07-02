@@ -3,7 +3,7 @@ from typing import Annotated
 
 import typer
 
-from skill_scanner.agent import skill_analyze
+from vetix.agent import skill_analyze
 
 app = typer.Typer(help="Skill Scan Agent — Automated scanning, identification, and assessment of SKILL security risks.")
 

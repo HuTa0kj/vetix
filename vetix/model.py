@@ -2,7 +2,7 @@ from typing import Optional
 
 from langchain_openai import ChatOpenAI
 
-from skill_scanner.config import read_config
+from vetix.config import read_config
 
 
 def get_model_info(model_id: str, config_path: Optional[str] = None) -> Optional[dict]:

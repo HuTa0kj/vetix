@@ -4,9 +4,9 @@ import asyncio
 import uuid
 from pathlib import Path
 
-from skill_scanner.skill_audit.graph import skill_safe_audit_workflow
-from skill_scanner.utils.logger import logger
-from skill_scanner.config import read_config
+from vetix.audit.graph import skill_safe_audit_workflow
+from vetix.utils.logger import logger
+from vetix.config import read_config
 
 
 def skill_analyze(skill_source: Path):
