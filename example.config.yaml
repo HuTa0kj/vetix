@@ -26,7 +26,6 @@ langsmith:
   api_key: ""
   project: ""
 
-script_extensions: ['.py', '.sh', '.bash', '.js', '.ts', '.rb', '.pl', '.go', '.rs', '.ps1', '.cmd', '.bat']
 debug: false
 output_dir: "./output"
 language: "en"

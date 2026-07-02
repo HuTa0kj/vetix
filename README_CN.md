@@ -49,7 +49,7 @@ uv sync
 复制示例配置文件并填写必要信息：
 
 ```bash
-cp config.yaml.example config.yaml
+cp example.config.yaml config.yaml
 ```
 
 编辑 `config.yaml`，配置模型 API 信息：
@@ -84,8 +84,6 @@ langsmith:
   api_key: ""
   project: ""
 
-# Script files to be detected
-script_extensions: ['.py', '.sh', '.bash', '.js', '.ts', '.rb', '.pl', '.go', '.rs', '.ps1', '.cmd', '.bat']
 debug: false
 output_dir: "./output"
 language: "en"

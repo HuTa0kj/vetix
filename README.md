@@ -51,7 +51,7 @@ uv sync
 Copy the example config and fill in the required fields:
 
 ```bash
-cp config.yaml.example config.yaml
+cp example.config.yaml config.yaml
 ```
 
 Edit `config.yaml` to configure model API settings:
@@ -86,8 +86,6 @@ langsmith:
   api_key: ""
   project: ""
 
-# Script files to be detected
-script_extensions: ['.py', '.sh', '.bash', '.js', '.ts', '.rb', '.pl', '.go', '.rs', '.ps1', '.cmd', '.bat']
 debug: false
 output_dir: "./output"
 language: "en"
