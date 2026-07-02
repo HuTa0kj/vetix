@@ -1,8 +1,14 @@
 import os
+
 from rich.console import Console
 from rich.markdown import Markdown
-
 from langchain_core.messages import AIMessage
+
+from vetix import __version__
+
+
+def get_version() -> str:
+    return __version__
 
 
 def read_prompt(filename: str) -> str:
