@@ -4,7 +4,7 @@ from langgraph.graph import StateGraph, START, END
 
 from vetix.model import get_llm
 from vetix.audit.state import SkillSafeAuditState
-from vetix.audit.nodes.get_base_info import gather_base_info
+from vetix.audit.nodes.gather_base_info import gather_base_info
 from vetix.audit.nodes.skill_summary import skill_summary
 from vetix.audit.nodes.code_audit import audit_scripts
 from vetix.utils.logger import logger
