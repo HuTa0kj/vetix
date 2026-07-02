@@ -20,7 +20,7 @@ def _should_skip_on_error(state: SkillSafeAuditState) -> str:
 
 def _should_scripts_audit(state: SkillSafeAuditState) -> str:
     """If script files exist in the SKILL directory, they need to be reviewed."""
-    if state.has_scripts:
+    if not state.single_skill_file:
         return "next"
     return "end"
 
