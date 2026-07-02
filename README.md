@@ -1,10 +1,8 @@
-# Skill Scanner Agent
+# Vetix
 
 An LLM Agent-based SKILL security scanning tool for automated identification and assessment of security risks in SKILL directories.
 
 [中文文档](./README_CN.md)
-
-![](./images/cover.png)
 
 ## Features
 
@@ -41,8 +39,8 @@ Traditional rule-based scanners rely on predefined patterns and signatures, whic
 
 ```bash
 # Clone the repository
-git clone https://github.com/HuTa0kj/skill-scanner-agent.git
-cd skill-scanner-agent
+git clone git@github.com:HuTa0kj/vetix.git
+cd vetix
 
 # Install dependencies
 uv sync
@@ -111,15 +109,10 @@ language: "en"
 
 ```bash
 # Scan a SKILL directory
-uv run skill-scanner scan --source ~/.claude/skills/skill-directory
-
-# Or run directly
-python -m skill_scanner.cli scan -s ~/.claude/skills/skill-directory
+uv run vetix scan --source ~/.claude/skills/skill-directory
 ```
 
 The target directory must contain a `SKILL.md` file.
-
-![](./images/audit.png)
 
 ### Output
 
@@ -131,10 +124,6 @@ output/
     ├── skill_summary.md    # SKILL overview report
     └── code_audit.md       # Code security audit report (only when scripts are present)
 ```
-
-## Report
-
-![](./images/report.png)
 
 ## Agent Tracing
 

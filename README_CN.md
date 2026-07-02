@@ -1,8 +1,6 @@
-# Skill Scanner Agent
+# Vetix
 
 基于 LLM Agent 的 SKILL 安全扫描工具，自动化识别与评估 SKILL 目录中的安全风险。
-
-![](./images/cover.png)
 
 ## 功能特性
 
@@ -39,8 +37,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/HuTa0kj/skill-scanner-agent.git
-cd skill-scanner-agent
+git clone git@github.com:HuTa0kj/vetix.git
+cd vetix
 
 # 安装依赖
 uv sync
@@ -109,15 +107,10 @@ language: "en"
 
 ```bash
 # 扫描指定 SKILL 目录
-uv run skill-scanner scan --source ~/.claude/skills/skill-directory
-
-# 或直接运行
-python -m skill_scanner.cli scan -s ~/.claude/skills/skill-directory
+uv run vetix scan --source ~/.claude/skills/skill-directory
 ```
 
 扫描目标目录必须包含 `SKILL.md` 文件。
-
-![](./images/audit.png)
 
 ### 输出
 
@@ -129,10 +122,6 @@ output/
     ├── skill_summary.md    # SKILL 概述报告
     └── code_audit.md       # 代码安全审计报告（仅当存在脚本文件时）
 ```
-
-## 报告
-
-![](./images/report.png)
 
 ## Agent 追踪
 
