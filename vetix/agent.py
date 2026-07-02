@@ -13,6 +13,7 @@ def skill_analyze(skill_source: Path):
     task_id = uuid.uuid4().hex
     logger.info(f"Thread ID: {task_id}")
     configs = read_config()
+    language = configs.get("language", "en")
     base_output_dir = configs.get("output_dir", "./output")
     output_dir = os.path.join(base_output_dir, task_id)
     workflow = skill_safe_audit_workflow()
@@ -23,7 +24,7 @@ def skill_analyze(skill_source: Path):
             "output_dir": output_dir,
             "task_id": task_id,
         },
-            config={"configurable": {"thread_id": task_id}},
+            config={"configurable": {"thread_id": task_id, "language": language}},
         )
     )
     end_time = time.time()
