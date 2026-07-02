@@ -101,7 +101,6 @@ def _enrich_tree_with_line_counts(structure: dict, root_path: str) -> dict:
             sub_root = os.path.join(root_path, key)
             enriched[key] = _enrich_tree_with_line_counts(value, sub_root)
         else:
-            # value 为 None — 表示文件（pstruc 用 None 标记文件节点），替换为 {"line_count": N}
             file_full_path = os.path.join(root_path, key)
             try:
                 with open(file_full_path, "r") as f:
