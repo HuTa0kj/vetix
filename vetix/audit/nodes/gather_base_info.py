@@ -43,6 +43,7 @@ async def gather_base_info(state: SkillSafeAuditState) -> dict:
             "project_structure": skill_structure,
             "language": language,
             "single_skill_file": True,
+            "file_number": 1,
         }
 
     return {
@@ -50,6 +51,7 @@ async def gather_base_info(state: SkillSafeAuditState) -> dict:
         "project_structure": skill_structure,
         "language": language,
         "single_skill_file": False,
+        "file_number": len(skill_structure),
     }
 
 

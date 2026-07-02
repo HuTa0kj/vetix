@@ -15,6 +15,7 @@ class SkillSafeAuditState(BaseModel):
     skill_name: str = ""
     project_structure: dict = Field(default_factory=dict)
     single_skill_file: bool = False
+    file_number: int = 0
 
     skill_summary_report: str = ""
     skill_code_audit_report: str = ""
