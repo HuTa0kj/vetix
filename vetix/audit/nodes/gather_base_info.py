@@ -10,6 +10,11 @@ from vetix.config import read_config
 
 async def gather_base_info(state: SkillSafeAuditState) -> dict:
     """
+    Get basic information about the SKILL catalog
+
+    SKILL name
+    Project Structure
+    Is it only SKILL.md?
 
     Args:
         state:
@@ -18,23 +23,33 @@ async def gather_base_info(state: SkillSafeAuditState) -> dict:
 
     """
     skill_dir = state.skill_dir
-    if not skill_dir or not os.path.isdir(skill_dir):
-        return nodes_error(f"Invalid skill directory: {skill_dir}")
-
+    # SKILL name
     skill_name = _get_skill_name(skill_dir)
+
     if not skill_name:
         return nodes_error("SKILL.md not found")
 
-    logger.info(f"Start testing SKILL: {skill_name}")
+    logger.info(f"Start scan SKILL: {skill_name}")
 
     config = read_config()
     language = config.get("language", "en")
 
+    # Project Structure
+    skill_structure = _get_skill_structure(skill_dir)
+
+    if _is_single_skill_file(skill_dir):
+        return {
+            "skill_name": skill_name,
+            "project_structure": skill_structure,
+            "language": language,
+            "single_skill_file": True,
+        }
+
     return {
         "skill_name": skill_name,
-        "project_structure": _get_skill_structure(skill_dir),
-        "has_scripts": _find_skill_scripts(skill_dir),
+        "project_structure": skill_structure,
         "language": language,
+        "single_skill_file": False,
     }
 
 
@@ -55,34 +70,6 @@ def _get_skill_name(path: str) -> str | None:
     return None
 
 
-def _find_skill_scripts(path: str) -> bool:
-    """
-    Check if script files exist in the SKILL directory.
-    Args:
-        path: SKILL path
-
-    Returns:
-
-    """
-    script_extensions = read_config()["script_extensions"]
-    found_scripts = []
-    for root, dirs, files in os.walk(path):
-        scripts_dir = os.path.join(root, "scripts")
-        if os.path.exists(scripts_dir) and os.path.isdir(scripts_dir):
-            logger.info(f"Found scripts directory: {scripts_dir}")
-            return True
-        for file in files:
-            ext = os.path.splitext(file)[1].lower()
-            if ext in script_extensions:
-                file_path = os.path.join(root, file)
-                found_scripts.append(file_path)
-        if len(found_scripts) > 0:
-            logger.info(f"Found scripts file: {found_scripts[5:]}...")
-            return True
-    logger.info(f"No scripts found in SKILL directory: {path}")
-    return False
-
-
 def _get_skill_structure(path: str) -> dict:
     """Exploration Project Structure"""
     structure: dict = get_project_structure(  # type: ignore
@@ -95,3 +82,15 @@ def _get_skill_structure(path: str) -> dict:
         ]
     )
     return structure
+
+
+def _is_single_skill_file(file_path: str) -> bool:
+    """Is there only one SKILL.md file in the directory?"""
+    if not os.path.isdir(file_path):
+        return False
+    files = os.listdir(file_path)
+    if len(files) > 1:
+        return False
+    if files[0] == "SKILL.md":
+        return True
+    return False

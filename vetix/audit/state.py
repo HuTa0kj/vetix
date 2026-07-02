@@ -9,13 +9,16 @@ class SkillSafeAuditState(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     messages: Annotated[list[AnyMessage], add_messages] = Field(default_factory=list)
+
+    task_id: str = ""
     skill_dir: str
     skill_name: str = ""
     project_structure: dict = Field(default_factory=dict)
-    has_scripts: bool = False
+    single_skill_file: bool = False
+
     skill_summary_report: str = ""
     skill_code_audit_report: str = ""
-    task_id: str = ""
+
     output_dir: str = ""
     language: str = "en"
     error: str | None = None
