@@ -1,4 +1,5 @@
 import os
+from pathlib import PurePath
 
 from rich.console import Console
 from rich.markdown import Markdown
@@ -9,6 +10,20 @@ from vetix import __version__
 
 def get_version() -> str:
     return __version__
+
+
+def get_file_extension(path: str | os.PathLike) -> str:
+    """Return the lowercase file extension of *path*, including the leading dot.
+
+    Examples:
+        >>> get_file_extension("foo.py")
+        '.py'
+        >>> get_file_extension("README.MD")
+        '.md'
+        >>> get_file_extension("noext")
+        ''
+    """
+    return PurePath(os.fspath(path)).suffix.lower()
 
 
 def read_prompt(filename: str) -> str:
