@@ -1,20 +1,21 @@
 models:
-  - id: glm-5
-    name: GLM-5
+  - id: deepseek-v4-pro
+    name: DeepSeek-V4-Pro
     api_key: ""
-    base_url: ""
-    temperature: 0.1
+    base_url: "https://xxx.com/v1"
+    temperature: 0.7
+    extra_body: {"thinking": {"type": "disabled"}}
 
   - id: deepseek-v4-flash
     name: DeepSeek-V4-Flash
     api_key: ""
-    base_url: ""
-    temperature: 0.1
+    base_url: "https://xxx.com/v1"
+    temperature: 0.7
     extra_body: {"thinking": {"type": "disabled"}}
 
 roles:
-  skill_summary: deepseek-v4-flash
-  audit_scripts: glm-5
+  lite: deepseek-v4-flash
+  pro: deepseek-v4-pro
 
 limit:
   model_call: 80
@@ -26,6 +27,4 @@ langsmith:
   api_key: ""
   project: ""
 
-debug: false
-output_dir: "./output"
 language: "en"
