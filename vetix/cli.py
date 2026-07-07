@@ -5,6 +5,7 @@ import typer
 
 from vetix.agent import skill_analyze
 from vetix.utils.banner import print_banner
+from vetix.utils.logger import set_debug
 
 app = typer.Typer(help="Vetix — Automated scanning, identification, and assessment of SKILL security risks.")
 
@@ -15,7 +16,14 @@ def scan(
             Path,
             typer.Option("--source", "-s", help="SKILL directory path"),
         ],
+        debug: Annotated[
+            bool,
+            typer.Option("--debug", "-d", help="Enable debug logging"),
+        ] = False,
 ) -> None:
+    if debug:
+        set_debug(True)
+
     if not source.exists():
         typer.echo(f"Error: path not found: {source}", err=True)
         raise typer.Exit(code=1)
@@ -30,7 +38,9 @@ def scan(
         raise typer.Exit(code=1)
 
     print_banner()
-    result = skill_analyze(source)
+    workspace = str(source.parent)
+
+    result = skill_analyze(source, workspace)
 
 
 if __name__ == "__main__":

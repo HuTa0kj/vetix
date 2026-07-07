@@ -101,4 +101,12 @@ class Logger:
 
 
 # Module-level convenience instance
-logger = Logger().get_logger()
+_default_logger = Logger()
+logger = _default_logger.get_logger()
+
+
+def set_debug(enabled: bool = True) -> None:
+    """Enable or disable debug logging at runtime."""
+    global logger, _default_logger
+    _default_logger = Logger(debug=enabled)
+    logger = _default_logger.get_logger()
