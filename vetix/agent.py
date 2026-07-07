@@ -9,7 +9,7 @@ from vetix.utils.logger import logger
 from vetix.config import read_config
 
 
-def skill_analyze(skill_source: Path):
+def skill_analyze(skill_source: Path, workspace: str):
     task_id = uuid.uuid4().hex
     logger.info(f"Thread ID: {task_id}")
     configs = read_config()
@@ -21,10 +21,11 @@ def skill_analyze(skill_source: Path):
     result = asyncio.run(
         workflow.ainvoke({
             "skill_dir": str(skill_source),
+            "workspace": str(workspace),
             "output_dir": output_dir,
             "task_id": task_id,
         },
-            config={"configurable": {"thread_id": task_id, "language": language}},
+            config={"configurable": {"thread_id": task_id, "workspace": workspace, "language": language}},
         )
     )
     end_time = time.time()
