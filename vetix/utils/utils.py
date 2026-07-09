@@ -1,6 +1,7 @@
 import os
 from pathlib import PurePath
 
+import json_repair
 from rich.console import Console
 from rich.markdown import Markdown
 from langchain_core.messages import AIMessage
@@ -163,3 +164,29 @@ def get_skills_root() -> str:
     """Get the skills root directory."""
     return os.path.join(os.path.dirname(os.path.dirname(__file__)), "skills")
 
+
+
+def structured_response_repair(llm_resp: dict, model_pydantic):
+    """
+    Some models with weaker reasoning capabilities may fail to pass Langchain structured output, resulting in data mismatches with Pydantic.
+    In Langchain, structured output is essentially a tool call, allowing for manual repair using fields in the message list combined with `repair_json`.
+
+    Args:
+        llm_resp: Large model return
+        model_pydantic: Data model that needs repair
+
+    Returns:
+
+    """
+    messages = llm_resp.get("messages", [])
+    model_name = getattr(model_pydantic, "__name__")
+    for msg in messages:
+        if isinstance(msg, AIMessage):
+            invalid_tool_calls = msg.invalid_tool_calls
+            for invalid_tool_call in invalid_tool_calls:
+                if invalid_tool_call.get("name") == model_name:
+                    json_string = invalid_tool_call.get("args")
+                    repaired_dict = json_repair.repair_json(json_string, return_objects=True)
+                    structured_response = model_pydantic(**repaired_dict)
+                    return structured_response
+    return None
