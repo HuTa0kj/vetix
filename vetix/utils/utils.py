@@ -105,3 +105,55 @@ def extract_report_message(result: dict) -> str:
     if len(second_last_text) > len(last_text):
         return second_last_text
     return last_text
+
+
+def get_relative_path(file_path: str, skill_dir: str) -> str:
+    """Get the relative path of the file in the SKILL directory"""
+    return os.path.relpath(file_path, skill_dir)
+
+
+def is_public_ip(ip):
+    """Determine if an IP address is a public IP address (filtering internal network and reserved addresses)."""
+    try:
+        parts = list(map(int, ip.split('.')))
+        if len(parts) != 4:
+            return False
+
+        a, b, c, d = parts
+
+        if not all(0 <= part <= 255 for part in parts):
+            return False
+
+        # 10.0.0.0/8
+        if a == 10:
+            return False
+        # 172.16.0.0/12
+        if a == 172 and 16 <= b <= 31:
+            return False
+        # 192.168.0.0/16
+        if a == 192 and b == 168:
+            return False
+
+        # 127.0.0.0/8
+        if a == 127:
+            return False
+        # 0.0.0.0/8
+        if a == 0:
+            return False
+        # 169.254.0.0/16
+        if a == 169 and b == 254:
+            return False
+        # 224.0.0.0/4
+        if 224 <= a <= 239:
+            return False
+        # 240.0.0.0/4
+        if 240 <= a <= 255:
+            return False
+        # 255.255.255.255
+        if ip == "255.255.255.255":
+            return False
+
+        return True
+
+    except (ValueError, AttributeError):
+        return False
