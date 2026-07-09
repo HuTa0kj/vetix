@@ -157,3 +157,9 @@ def is_public_ip(ip):
 
     except (ValueError, AttributeError):
         return False
+
+
+def get_skills_root() -> str:
+    """Get the skills root directory."""
+    return os.path.join(os.path.dirname(os.path.dirname(__file__)), "skills")
+
