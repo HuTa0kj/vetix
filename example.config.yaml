@@ -17,10 +17,6 @@ roles:
   lite: deepseek-v4-flash
   pro: deepseek-v4-pro
 
-limit:
-  model_call: 80
-  tool_call: 80
-
 langsmith:
   tracing: true
   endpoint: "https://api.smith.langchain.com"
