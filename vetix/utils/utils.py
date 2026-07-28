@@ -165,7 +165,6 @@ def get_skills_root() -> str:
     return os.path.join(os.path.dirname(os.path.dirname(__file__)), "skills")
 
 
-
 def structured_response_repair(llm_resp: dict, model_pydantic):
     """
     Some models with weaker reasoning capabilities may fail to pass Langchain structured output, resulting in data mismatches with Pydantic.
@@ -190,3 +189,27 @@ def structured_response_repair(llm_resp: dict, model_pydantic):
                     structured_response = model_pydantic(**repaired_dict)
                     return structured_response
     return None
+
+
+def get_tree_stats(tree: dict) -> dict:
+    """Retrieve various statistics of the directory tree"""
+    total_files = 0
+    total_dirs = 0
+
+    def count_recursive(struct: dict):
+        nonlocal total_files, total_dirs
+        for name, content in struct.items():
+            if isinstance(content, dict):
+                total_dirs += 1
+                count_recursive(content)
+            else:
+                total_files += 1
+
+    count_recursive(tree)
+
+    return {
+        "top_level_items": len(tree),  # Number of top-level projects
+        "total_files": total_files,  # Total number of files
+        "total_dirs": total_dirs,  # Total number of folders
+        "total_items": total_files + total_dirs  # Total number of projects
+    }
