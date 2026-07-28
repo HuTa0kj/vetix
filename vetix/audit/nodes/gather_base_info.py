@@ -30,6 +30,7 @@ async def gather_base_info(state: SkillSafeAuditState) -> dict:
         return nodes_error("SKILL.md not found")
 
     logger.info(f"Start scan SKILL: {skill_name}")
+    skill_content = _read_skill_content(skill_dir)
 
     config = read_config()
     language = config.get("language", "en")
@@ -44,6 +45,7 @@ async def gather_base_info(state: SkillSafeAuditState) -> dict:
             "language": language,
             "single_skill_file": True,
             "file_number": 1,
+            "skill_content": skill_content,
         }
 
     return {
@@ -52,6 +54,7 @@ async def gather_base_info(state: SkillSafeAuditState) -> dict:
         "language": language,
         "single_skill_file": False,
         "file_number": len(skill_structure),
+        "skill_content": skill_content,
     }
 
 
@@ -123,3 +126,9 @@ def _is_single_skill_file(file_path: str) -> bool:
     if files[0] == "SKILL.md":
         return True
     return False
+
+
+def _read_skill_content(file_path: str) -> str:
+    with open(os.path.join(file_path, "SKILL.md"), "r", encoding="utf-8") as f:
+        content = f.read()
+    return content
