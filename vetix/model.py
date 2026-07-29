@@ -1,6 +1,6 @@
 from typing import Optional
 
-from langchain_openai import ChatOpenAI
+from langchain_openai.chat_models.base import BaseChatOpenAI
 
 from vetix.config import read_config
 
@@ -57,7 +57,7 @@ def get_llm(
         print(f"No model info found for: {model_id} (role: {role})")
         return None
 
-    return ChatOpenAI(
+    return BaseChatOpenAI(
         model=model_info['id'],
         api_key=model_info['api_key'],
         base_url=model_info['base_url'],
