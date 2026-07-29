@@ -30,4 +30,4 @@ def skill_analyze(skill_source: Path, workspace: str):
     )
     end_time = time.time()
     elapsed = end_time - start_time
-    logger.info(f"SKILL scan complete, time {elapsed:.2f} seconds, output directory: {output_dir}")
+    logger.info(f"SKILL scan complete, time {elapsed:.2f} seconds")
