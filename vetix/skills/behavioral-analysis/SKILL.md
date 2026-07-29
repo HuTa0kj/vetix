@@ -89,17 +89,12 @@ The determination must combine the functional description in SKILL.md with the c
 
 ## Severity Level
 
-| Level | Host Consequences |
-
-|------|---------|
-
-| `critical` | Direct damage (rm -rf /, disk wiping), remote code execution (curl\|sh), reverse shell, known malicious IOC (C2 IP/domain/hash) |
-
-| `high` | Credentials leak, SSH key writing, injection hints, reading browser credentials/`.aws`/`.ssh`, privilege escalation (network reachable) |
-
-| `medium` | Suspicious outbound traffic, suspicious persistence, obfuscated execution chain, privilege escalation attempt, command injection (network reachable) |
-
-| `low` | Insecure protocols (`ws://`, `ftp://`), suspicious but not forming a complete execution path, command injection configured only locally |
+| Level      | Host Consequences                                            |
+| :--------- | :----------------------------------------------------------- |
+| `critical` | Direct damage (rm -rf /, disk wiping), remote code execution (curl \| sh), reverse shell, known malicious IOC (C2 IP/domain/hash) |
+| `high`     | Credentials leak, SSH key writing, injection hints, reading browser credentials/`.aws`/`.ssh`, network-reachable privilege escalation |
+| `medium`   | Suspicious outbound traffic, suspicious persistence, obfuscated execution chain, privilege escalation attempt, network-reachable command injection |
+| `low`      | Insecure protocols (`ws://`, `ftp://`), suspicious indicators (incomplete execution chain), locally configured command injection only |
 
 ## Important Rules
 
