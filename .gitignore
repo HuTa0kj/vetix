@@ -233,3 +233,4 @@ output/
 .DS_Store
 .idea/
 config.yaml
+examples/
