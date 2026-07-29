@@ -1,4 +1,5 @@
---- name: skill-check
+---
+name: behavioral-analysis
 description: "Analyzes security risks in the AI Agent/MCP Skill catalog. Used when users request to inspect, audit, review, or scan the Skill catalog for potential security risks, including command injection, data leakage, prompt word attacks, stealth access, remote execution, or other malicious activities within the SKILL package."
 ---
 
