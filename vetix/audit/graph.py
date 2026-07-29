@@ -1,28 +1,11 @@
-from functools import partial
-
 from langgraph.graph import StateGraph, START, END
 
-from vetix.model import get_llm
 from vetix.audit.state import SkillSafeAuditState
 from vetix.audit.nodes.gather_base_info import gather_base_info
-from vetix.audit.nodes.skill_summary import skill_summary
-from vetix.audit.nodes.code_audit import audit_scripts
-from vetix.utils.logger import logger
-
-
-def _should_skip_on_error(state: SkillSafeAuditState) -> str:
-    """If an error occurs in the middle of the workflow, it will end immediately."""
-    if state.error:
-        logger.error(state.error)
-        return "end"
-    return "next"
-
-
-def _should_scripts_audit(state: SkillSafeAuditState) -> str:
-    """If script files exist in the SKILL directory, they need to be reviewed."""
-    if not state.single_skill_file:
-        return "next"
-    return "end"
+from vetix.audit.nodes.plugins_check import plugins_check
+from vetix.audit.nodes.plugins_findings_verify import plugins_findings_verify
+from vetix.audit.nodes.behavioral_analysis import behavioral_analysis
+from vetix.audit.nodes.report import report
 
 
 def skill_safe_audit_workflow():
@@ -34,19 +17,17 @@ def skill_safe_audit_workflow():
     graph = StateGraph(SkillSafeAuditState)
     # nodes
     graph.add_node("gather_base_info", gather_base_info)
-    graph.add_node("skill_summary", partial(skill_summary, llm=get_llm(role="skill_summary")))
-    graph.add_node("audit_scripts", partial(audit_scripts, llm=get_llm(role="audit_scripts")))
+    graph.add_node("plugins_check", plugins_check)
+    graph.add_node("plugins_findings_verify", plugins_findings_verify)
+    graph.add_node("behavioral_analysis", behavioral_analysis)
+    graph.add_node("report", report)
 
     # edge
     graph.add_edge(START, "gather_base_info")
-    graph.add_conditional_edges("gather_base_info", _should_skip_on_error, {
-        "next": "skill_summary",
-        "end": END,
-    })
-    graph.add_conditional_edges("skill_summary", _should_scripts_audit, {
-        "next": "audit_scripts",
-        "end": END,
-    })
-    graph.add_edge("audit_scripts", END)
+    graph.add_edge("gather_base_info", "plugins_check")
+    graph.add_edge("plugins_check", "plugins_findings_verify")
+    graph.add_edge("plugins_findings_verify", "behavioral_analysis")
+    graph.add_edge("behavioral_analysis", "report")
+    graph.add_edge("report", END)
 
     return graph.compile()
