@@ -1,42 +1,62 @@
-# Skill Scanner Agent
+# Vetix — Project Map
 
-Automated scanning, identification, and assessment of SKILL security risks.
+Vetix is an LLM-agent-based scanner for [SKILL](https://docs.claude.com/en/docs/claude-code/skills) directories. It pairs deterministic plugin rules with an LLM behavioral analyst so both obvious IOCs and subtle, obfuscated attack chains get caught in one pass.
 
-## Architecture
+End-user docs live in [README.md](./README.md) / [README_CN.md](./README_CN.md). This file is a map for navigating the codebase.
+
+## Repository Layout
 
 ```
-skill_scanner/
-  cli.py              Entry point — Typer CLI with `scan` command
-  agent.py            Orchestrator — builds workflow, runs it, manages output
-  skill_audit/
-    graph.py          LangGraph workflow — defines node graph and conditional edges
-    state.py          Shared state — SkillSafeAuditState (Pydantic model)
-    nodes/
-      get_base_info.py   Gather — validate skill dir, extract name, detect scripts
-      skill_summary.py   Summarize — generate project overview report via LLM agent
-      code_audit.py      Audit — security analysis on scripts via LLM agent
-    schemas/
-      info.py         Pydantic schemas for data extraction
-  utils/
-    utils.py          Helpers — prompt loading, report rendering/saving, message extraction
-    logger.py         Rich-powered logger with console + file handlers
-  prompts/
-    skill_summary.md  System prompt for project analysis
-    code_audit.md     System prompt for security audit
-config.py             Config loader — reads config.yaml, caches result, sets LangSmith env vars
-config.yaml           Runtime configuration (models, roles, langsmith, language, etc.)
+vetix/
+  cli.py                Typer entry point — `vetix scan`
+  agent.py              Orchestrator — builds the workflow, runs it
+  config.py             YAML config loader (cached, sets LangSmith env)
+  model.py              Role → ChatOpenAI factory (`get_llm`)
+  plugin.py             Plugin ABC, Issue/Severity types, plugin loader
+  audit/
+    graph.py            LangGraph workflow definition
+    state.py            Shared state + finding Pydantic models
+    nodes/              Workflow nodes (one file per stage)
+  plugins/              Deterministic scanners (auto-discovered)
+  middleware/           Agent middleware (e.g. tool filtering)
+  prompts/              System prompts for each LLM stage
+  skills/               Helper skills mounted into the analyst agent
+  utils/                Logging, file classification, helpers
+config.yaml             Runtime config (gitignored) — see example.config.yaml
+example.config.yaml     Config template
 ```
 
 ## Workflow
 
 ```
-gather_base_info -> skill_summary -> audit_scripts -> END
-                   (skip if error)   (skip if no scripts)
+gather_base_info → plugins_check → plugins_findings_verify → behavioral_analysis → report
 ```
 
-## Key Design Decisions
+State is shared via `SkillSafeAuditState` (Pydantic). Each node returns a dict that merges into state; there are no conditional edges.
 
-- Each audit node creates a `deep_agent` with virtual filesystem (read-only) access to the skill directory
-- Config is loaded once and cached at module level (`config.py`)
-- Report language (`en`/`zh`) is controlled via `config.yaml` `language` field, injected into user prompts at runtime
-- LangSmith tracing is enabled by setting env vars from config on first load
+- `plugins_check` runs every plugin in `vetix/plugins/` against every file.
+- `plugins_findings_verify` re-judges plugin hits against the real file content with an LLM (role `lite`).
+- `behavioral_analysis` runs an LLM agent (role `pro`) over the skill to catch risks the rules miss. Single-file SKILLs take a fast path with no filesystem tools.
+- `report` renders findings to the terminal.
+
+## Extension Points
+
+- **New static rule** → drop a `*.py` in `vetix/plugins/`, subclass `Plugin`, implement `scan()`. Auto-discovered on the next run.
+- **New LLM stage** → add a node in `vetix/audit/nodes/`, wire it into `audit/graph.py`, declare any new state fields in `audit/state.py`.
+- **New prompt** → add a markdown file under `vetix/prompts/`, load it with `read_prompt()`.
+
+## Configuration
+
+`config.yaml` defines the two LLM roles the pipeline expects:
+
+- `roles.lite` — fast/cheap model for `plugins_findings_verify`.
+- `roles.pro` — stronger reasoning model for `behavioral_analysis`.
+
+See [example.config.yaml](./example.config.yaml) for the full template.
+
+## Design Principles
+
+- **Defense in depth** — cheap IOCs are caught by plugins; semantic / multi-file chains by the LLM. Neither alone is sufficient.
+- **Verify before reporting** — high-recall plugin hits are LLM-confirmed against real file content before reaching the report.
+- **Read-only by construction** — every agent runs in a virtual filesystem with explicit read allow-lists, a blanket write deny, and mutating tools stripped before each model call.
+- **Structured output with a repair net** — agents return Pydantic models; malformed tool calls fall back to `json_repair` so the pipeline still produces usable findings.
