@@ -91,8 +91,8 @@ async def behavioral_analysis_agent(state: SkillSafeAuditState) -> list[Behavior
                 paths=[
                     f"/{skill_dir}",
                     f"/{skill_dir}/**",
-                    "/skills/skill_behavioral_analysis",
-                    "/skills/skill_behavioral_analysis/**",
+                    "/skills/behavioral-analysis",
+                    "/skills/behavioral-analysis/**",
                 ],
                 mode="allow",
             ),
@@ -102,7 +102,7 @@ async def behavioral_analysis_agent(state: SkillSafeAuditState) -> list[Behavior
                 mode="deny",
             ),
         ],
-        skills=["/skills/skill_behavioral_analysis/"],
+        skills=["/skills/behavioral-analysis/"],
         middleware=[
             ToolFilterMiddleware(
                 forbidden_tools=["edit_file", "write_file", "ls", "glob", "glob_search"]),
