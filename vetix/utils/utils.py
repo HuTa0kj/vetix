@@ -60,7 +60,7 @@ def save_report(output_dir: str, filename: str, content: str):
 
     Args:
         output_dir: Directory to save the report.
-        filename: Filename (e.g. "skill_summary.md").
+        filename: Filename.
         content: Markdown content.
     """
     os.makedirs(output_dir, exist_ok=True)
