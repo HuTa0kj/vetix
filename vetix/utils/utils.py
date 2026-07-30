@@ -213,3 +213,11 @@ def get_tree_stats(tree: dict) -> dict:
         "total_dirs": total_dirs,  # Total number of folders
         "total_items": total_files + total_dirs  # Total number of projects
     }
+
+
+def get_output_language(language_symbol: str) -> str:
+    l_map = {
+        "en": "You need to use English output.",
+        "zh": "你需要使用中文作为输出语言。"
+    }
+    return l_map.get(language_symbol, "You need to use English output.")
