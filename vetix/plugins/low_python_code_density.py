@@ -4,32 +4,13 @@ from vetix.plugin import Issue, Plugin, Severity
 from vetix.utils.utils import get_relative_path, get_file_extension
 
 
-class PythonFileCheckPlugin(Plugin):
-    """Python file for detecting structural anomalies"""
+class LowPythonCodeDensityCheckPlugin(Plugin):
+    """Identify Python files with low code density"""
 
-    name = "python file check"
+    name = "Low Python Code Density"
 
     def __init__(self) -> None:
         self.min_ratio = 0.2
-
-    def scan(self, skill_dir: str, file_path: str, content: str) -> list[Issue]:
-        issues: list[Issue] = []
-        ext = get_file_extension(file_path)
-        if ext != ".py":
-            return []
-
-        relative_path = get_relative_path(file_path, skill_dir)
-        if self.code_density_check(content):
-            issues.append(Issue(
-                name="Low code density Python files",
-                severity=Severity.MEDIUM,
-                description="Python files often have low effective code density and may contain distracting text.",
-                file_path=relative_path,
-                suggestion="Check file contents to prevent the execution of code containing malicious instructions.",
-                audit_required=False
-            ))
-
-        return issues
 
     def code_density_check(self, content: str) -> bool:
         file_line = len(content.splitlines())
@@ -58,3 +39,22 @@ class PythonFileCheckPlugin(Plugin):
         # Percentage of valid lines of code to total lines of code
         ratio = len(code_lines) / len(content.splitlines())
         return ratio < self.min_ratio
+
+    def scan(self, skill_dir: str, file_path: str, content: str) -> list[Issue]:
+        issues: list[Issue] = []
+        ext = get_file_extension(file_path)
+        if ext != ".py":
+            return []
+
+        relative_path = get_relative_path(file_path, skill_dir)
+        if not self.code_density_check(content):
+            return []
+
+        return [Issue(
+            name="Low code density Python files",
+            severity=Severity.MEDIUM,
+            description="Python files often have low effective code density and may contain distracting text.",
+            file_path=relative_path,
+            suggestion="Check file contents to prevent the execution of code containing malicious instructions.",
+            audit_required=False
+        )]
