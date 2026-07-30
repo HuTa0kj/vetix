@@ -20,6 +20,10 @@ def scan(
             bool,
             typer.Option("--debug", "-d", help="Enable debug logging"),
         ] = False,
+        language: Annotated[
+            str,
+            typer.Option("--language", "-l", help="Output language for the audit report (e.g. en, zh)"),
+        ] = "en",
 ) -> None:
     if debug:
         set_debug(True)
@@ -40,7 +44,7 @@ def scan(
     print_banner()
     workspace = str(source.parent)
 
-    result = skill_analyze(source, workspace)
+    result = skill_analyze(source, workspace, language)
 
 
 if __name__ == "__main__":

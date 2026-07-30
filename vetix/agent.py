@@ -9,11 +9,10 @@ from vetix.utils.logger import logger
 from vetix.config import read_config
 
 
-def skill_analyze(skill_source: Path, workspace: str):
+def skill_analyze(skill_source: Path, workspace: str, language: str = "en"):
     task_id = uuid.uuid4().hex
     logger.info(f"Thread ID: {task_id}")
     configs = read_config()
-    language = configs.get("language", "en")
     base_output_dir = configs.get("output_dir", "./output")
     output_dir = os.path.join(base_output_dir, task_id)
     workflow = skill_safe_audit_workflow()
@@ -24,6 +23,7 @@ def skill_analyze(skill_source: Path, workspace: str):
             "workspace": str(workspace),
             "output_dir": output_dir,
             "task_id": task_id,
+            "language": language,
         },
             config={"configurable": {"thread_id": task_id, "workspace": workspace, "language": language}},
         )
