@@ -4,10 +4,11 @@ from langchain.agents.middleware import ModelCallLimitMiddleware, ToolRetryMiddl
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from vetix.llm import get_llm
-from vetix.audit.state import SkillSafeAuditState, BehavioralRiskItem, BehavioralAnalysisResult
+from vetix.audit.state import SkillSafeAuditState
+from vetix.audit.schemas import BehavioralAnalysisResult, BehavioralRiskItem
 from vetix.middleware.tool_filter import ToolFilterMiddleware
 from vetix.utils.logger import logger
-from vetix.utils.utils import get_skills_root, read_prompt, get_tree_stats
+from vetix.utils.utils import get_skills_root, read_prompt
 
 
 async def behavioral_analysis(state: SkillSafeAuditState) -> dict:

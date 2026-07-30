@@ -5,7 +5,8 @@ from langchain_core.messages import HumanMessage
 from deepagents import create_deep_agent, FilesystemPermission
 from deepagents.backends import FilesystemBackend
 
-from vetix.audit.state import SkillSafeAuditState, PluginsVerificationResult, RiskFinding
+from vetix.audit.state import SkillSafeAuditState
+from vetix.audit.schemas import PluginsVerificationResult, RiskFinding
 from vetix.middleware.tool_filter import ToolFilterMiddleware
 from vetix.plugin import Issue
 from vetix.llm import get_llm
