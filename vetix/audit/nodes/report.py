@@ -35,7 +35,6 @@ async def report(state: SkillSafeAuditState) -> dict:
     info_table.add_row("[bold]Skill[/]", skill_name)
     info_table.add_row("[bold]Directory[/]", state.skill_dir)
     info_table.add_row("[bold]Files[/]", str(state.file_number))
-    info_table.add_row("[bold]Mode[/]", "single file" if state.single_skill_file else "multi file")
     info_table.add_row("[bold]Language[/]", state.language or "en")
     console.print(Panel(info_table, title="[bold]Basic Info", border_style="blue"))
     console.print()
