@@ -3,7 +3,7 @@ import os
 from pstruc import get_project_structure
 
 from vetix.audit.state import SkillSafeAuditState
-from vetix.utils.utils import nodes_error
+from vetix.utils.utils import nodes_error, get_tree_stats
 from vetix.utils.logger import logger
 from vetix.config import read_config
 
@@ -37,8 +37,10 @@ async def gather_base_info(state: SkillSafeAuditState) -> dict:
 
     # Project Structure
     skill_structure = _get_skill_structure(skill_dir)
+    tree_stats = get_tree_stats(skill_structure)
 
     if _is_single_skill_file(skill_dir):
+        logger.info("Found 1 file in the SKILL directory")
         return {
             "skill_name": skill_name,
             "project_structure": skill_structure,
@@ -47,13 +49,14 @@ async def gather_base_info(state: SkillSafeAuditState) -> dict:
             "file_number": 1,
             "skill_content": skill_content,
         }
-
+    file_number = tree_stats["total_files"]
+    logger.info(f"Found {file_number} files in the SKILL directory")
     return {
         "skill_name": skill_name,
         "project_structure": skill_structure,
         "language": language,
         "single_skill_file": False,
-        "file_number": len(skill_structure),
+        "file_number": file_number,
         "skill_content": skill_content,
     }
 

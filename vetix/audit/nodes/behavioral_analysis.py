@@ -67,13 +67,13 @@ async def behavioral_analysis_agent(state: SkillSafeAuditState) -> list[Behavior
     skill_dir = state.skill_dir
     workspace = state.workspace
     project_structure = state.project_structure
-    tree_stats = get_tree_stats(project_structure)
+    file_number = state.file_number
     logger.info(f"behavioral_analysis: start, skill_dir={skill_dir}")
     user_prompt = (
         "Please perform a behavioral security analysis on the following SKILL categories to identify security risks that the rules cannot recognize.\n\n"
         f"SKILL directory path: /{skill_dir}\n\n"
         f"The directory structure is as follows: {project_structure}\n\n"
-        f"The number of files in the directory is:{tree_stats['total_files']}\n\n"
+        f"The number of files in the directory is:{file_number}\n\n"
         "The analysis begins with SKILL.md in the target directory."
     )
     agent = create_deep_agent(
