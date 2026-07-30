@@ -95,6 +95,9 @@ uv run vetix scan -s ./examples/skills/malicious/pop-calc --debug
 
 # 使用中文输出
 uv run vetix scan -s ./examples/skills/malicious/pop-calc -l zh
+
+# 创建新插件
+uv run vetix create --plugin "my check"
 ```
 
 ## Agent 追踪

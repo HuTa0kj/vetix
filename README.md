@@ -95,6 +95,9 @@ uv run vetix scan -s ./examples/skills/malicious/pop-calc --debug
 
 # Use Chinese output
 uv run vetix scan -s ./examples/skills/malicious/pop-calc -l zh
+
+# Create a new plugin
+uv run vetix create --plugin "my check"
 ```
 
 ## Agent Tracing
