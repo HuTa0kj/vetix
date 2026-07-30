@@ -66,8 +66,6 @@ roles:
   lite: deepseek-v4-flash
   pro:  deepseek-v4-pro
 
-language: "en"
-
 # 可选：LangSmith 追踪
 langsmith:
   tracing: true
@@ -81,7 +79,6 @@ langsmith:
 | `models` | 可用 LLM 列表。每项需配置 `id`、`api_key`、`base_url`；`temperature`、`extra_body` 可选。 |
 | `roles.lite` | 快速模型，适用于追求速度、不复杂的任务。 |
 | `roles.pro` | 推理模型，适用于需要复杂推理的任务。 |
-| `language` | 报告语言提示（`en` / `zh`）。 |
 | `langsmith` | LangSmith 追踪配置（可选）。 |
 
 ### 使用
@@ -95,6 +92,9 @@ uv run vetix scan -s ./examples/skills/malicious/pop-calc
 
 # 开启调试日志
 uv run vetix scan -s ./examples/skills/malicious/pop-calc --debug
+
+# 使用中文输出
+uv run vetix scan -s ./examples/skills/malicious/pop-calc -l zh
 ```
 
 ## Agent 追踪

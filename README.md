@@ -66,8 +66,6 @@ roles:
   lite: deepseek-v4-flash
   pro:  deepseek-v4-pro
 
-language: "en"
-
 # Optional: LangSmith tracing
 langsmith:
   tracing: true
@@ -81,7 +79,6 @@ langsmith:
 | `models` | Available LLMs. Each entry requires `id`, `api_key`, `base_url`; `temperature` and `extra_body` are optional. |
 | `roles.lite` | Fast model, for speed-oriented, less complex tasks. |
 | `roles.pro` | Reasoning model, for tasks that require complex reasoning. |
-| `language` | Report language hint (`en` / `zh`). |
 | `langsmith` | LangSmith tracing config (optional). |
 
 ### Usage
@@ -95,6 +92,9 @@ uv run vetix scan -s ./examples/skills/malicious/pop-calc
 
 # Enable debug logging
 uv run vetix scan -s ./examples/skills/malicious/pop-calc --debug
+
+# Use Chinese output
+uv run vetix scan -s ./examples/skills/malicious/pop-calc -l zh
 ```
 
 ## Agent Tracing
