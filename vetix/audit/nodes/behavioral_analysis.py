@@ -8,7 +8,7 @@ from vetix.audit.state import SkillSafeAuditState
 from vetix.audit.schemas import BehavioralAnalysisResult, BehavioralRiskItem
 from vetix.middleware.tool_filter import ToolFilterMiddleware
 from vetix.utils.logger import logger
-from vetix.utils.utils import get_skills_root, read_prompt
+from vetix.utils.utils import get_skills_root, read_prompt, get_output_language
 
 
 async def behavioral_analysis(state: SkillSafeAuditState) -> dict:
@@ -36,6 +36,7 @@ async def single_skill_analysis(state: SkillSafeAuditState) -> list[BehavioralRi
         f"The directory structure is as follows:{project_structure}\n\n"
         "The following is the full content of SKILL.md:\n\n"
         f"```markdown\n{skill_content}\n```\n\n"
+        f"{get_output_language(state.language)}\n\n"
     )
     llm = get_llm(role="pro")
     if llm is None:
@@ -75,7 +76,8 @@ async def behavioral_analysis_agent(state: SkillSafeAuditState) -> list[Behavior
         f"SKILL directory path: /{skill_dir}\n\n"
         f"The directory structure is as follows: {project_structure}\n\n"
         f"The number of files in the directory is:{file_number}\n\n"
-        "The analysis begins with SKILL.md in the target directory."
+        "The analysis begins with SKILL.md in the target directory.\n\n"
+        f"{get_output_language(state.language)}\n\n"
     )
     agent = create_deep_agent(
         backend=CompositeBackend(

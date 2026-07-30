@@ -11,7 +11,7 @@ from vetix.middleware.tool_filter import ToolFilterMiddleware
 from vetix.plugin import Issue
 from vetix.llm import get_llm
 from vetix.utils.logger import logger
-from vetix.utils.utils import read_prompt, structured_response_repair
+from vetix.utils.utils import read_prompt, structured_response_repair, get_output_language
 
 
 async def plugins_findings_verify(state: SkillSafeAuditState) -> dict:
@@ -82,7 +82,8 @@ async def plugins_findings_verify(state: SkillSafeAuditState) -> dict:
         "The system combines contextual judgment with the output of the verification results for each hit, based on the schema.\n\n"
         f"SKILL absolute path: /{skill_name}\n\n"
         f"The directory structure is: {project_structure}\n\n"
-        f"Hit list: \n{required_verify_findings}"
+        f"Hit list: \n{required_verify_findings}\n\n"
+        f"{get_output_language(state.language)}\n\n"
     )
 
     result = await agent.ainvoke({"messages": [HumanMessage(content=user_prompt)]})  # type: ignore

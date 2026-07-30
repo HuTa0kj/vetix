@@ -5,7 +5,6 @@ from pstruc import get_project_structure
 from vetix.audit.state import SkillSafeAuditState
 from vetix.utils.utils import nodes_error, get_tree_stats
 from vetix.utils.logger import logger
-from vetix.config import read_config
 
 
 async def gather_base_info(state: SkillSafeAuditState) -> dict:
@@ -32,9 +31,6 @@ async def gather_base_info(state: SkillSafeAuditState) -> dict:
     logger.info(f"Start scan SKILL: {skill_name}")
     skill_content = _read_skill_content(skill_dir)
 
-    config = read_config()
-    language = config.get("language", "en")
-
     # Project Structure
     skill_structure = _get_skill_structure(skill_dir)
     tree_stats = get_tree_stats(skill_structure)
@@ -44,7 +40,6 @@ async def gather_base_info(state: SkillSafeAuditState) -> dict:
         return {
             "skill_name": skill_name,
             "project_structure": skill_structure,
-            "language": language,
             "single_skill_file": True,
             "file_number": 1,
             "skill_content": skill_content,
@@ -54,7 +49,6 @@ async def gather_base_info(state: SkillSafeAuditState) -> dict:
     return {
         "skill_name": skill_name,
         "project_structure": skill_structure,
-        "language": language,
         "single_skill_file": False,
         "file_number": file_number,
         "skill_content": skill_content,
