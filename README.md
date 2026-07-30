@@ -12,6 +12,24 @@ An LLM-agent-based scanner for [SKILL](https://docs.claude.com/en/docs/claude-co
 - **Defense-in-depth sandbox** — virtual filesystems, explicit read allow-lists, and a blanket write deny isolate the real host.
 - **LangSmith tracing** — every agent run is observable end-to-end.
 
+## Detection Categories
+
+The behavioral analysis agent classifies risks into 11 categories:
+
+| Category | Description |
+|---|---|
+| `remote_execution` | Remote code loading and execution, including `curl\|sh`, `wget\|bash`, and unofficial package installations |
+| `data_exfiltration` | Unauthorized collection and transmission of sensitive data to external addresses |
+| `secret_access` | Theft or exposure of credentials such as API keys, tokens, and passwords |
+| `persistence` | Backdoor mechanisms that survive reboots — crontab injection, SSH key planting, startup item modification |
+| `destructive` | Actions that corrupt data, delete files, or otherwise damage the host system |
+| `obfuscation` | Deliberate concealment of malicious payloads via Base64/Hex encoding, blank-line hiding, or disguised commands |
+| `command_injection` | Injection of arbitrary shell commands through unsanitized input or instruction manipulation |
+| `privilege_escalation` | Attempts to gain elevated permissions beyond what the skill's stated function requires |
+| `sensitive_file_access` | Unauthorized reading or writing of SSH keys, `.aws` credentials, browser data, `.env` files, and similar secrets |
+| `network_abuse` | Suspicious outbound connections, C2 communication, or traffic to hard-coded external IPs/domains |
+| `prompt_injection` | Instructions that rewrite agent behavior — "ignore previous instructions", "DAN mode", "forget everything", etc. |
+
 ## Why an Agent?
 
 Traditional rule-based scanners rely on predefined patterns and signatures, which limits their ability to catch novel or subtle threats. Vetix leverages LLM-powered agents to overcome these limitations:

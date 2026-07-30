@@ -12,6 +12,24 @@
 - **纵深防御沙箱** —— 虚拟文件系统、显式读允许列表、全局写拒绝，隔离真实主机。
 - **LangSmith 追踪** —— 端到端可观测每一次 Agent 运行。
 
+## 检测分类
+
+行为分析 Agent 将风险分为 11 个类别：
+
+| 分类 | 描述 |
+|---|---|
+| `remote_execution` | 远程代码加载与执行，包括 `curl\|sh`、`wget\|bash` 以及非官方源的包安装 |
+| `data_exfiltration` | 未经授权收集敏感数据并传输至外部地址 |
+| `secret_access` | 窃取或暴露 API 密钥、Token、密码等凭据 |
+| `persistence` | 通过 crontab 注入、SSH 密钥植入、启动项篡改等手段实现持久化 |
+| `destructive` | 破坏数据、删除文件或对主机系统造成其他损害的行为 |
+| `obfuscation` | 通过 Base64/Hex 编码、大量空行隐藏、伪装命令等手段刻意隐藏恶意载荷 |
+| `command_injection` | 通过未清洗的输入或指令操控注入任意 Shell 命令 |
+| `privilege_escalation` | 试图获取超出 SKILL 声明功能所需的更高权限 |
+| `sensitive_file_access` | 未经授权读取或写入 SSH 密钥、`.aws` 凭据、浏览器数据、`.env` 文件等敏感信息 |
+| `network_abuse` | 可疑的外发连接、C2 通信或指向硬编码外部 IP/域名的流量 |
+| `prompt_injection` | 改写 Agent 行为的指令——「忽略之前的指令」「DAN 模式」「忘记一切」等 |
+
 ## 为什么选择 Agent？
 
 传统的基于规则的扫描器依赖预定义的模式和签名，无法有效检测新型或隐蔽威胁。Vetix 利用 LLM 驱动的智能体突破这些限制：
