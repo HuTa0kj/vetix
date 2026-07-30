@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import re
 from abc import ABC, abstractmethod
 
 from pathlib import Path
@@ -69,6 +70,54 @@ def load_plugins() -> list[Plugin]:
             ):
                 instances.append(attr())
     return instances
+
+
+PLUGIN_TEMPLATE = '''\
+from vetix.plugin import Issue, Plugin, Severity
+
+
+class {class_name}(Plugin):
+    name = "{plugin_name}"
+
+    def scan(self, skill_dir: str, file_path: str, content: str) -> list[Issue]:
+        issues: list[Issue] = []
+        return issues
+'''
+
+
+def _to_snake_case(name: str) -> str:
+    name = re.sub(r"[^\w\s]", "", name)
+    name = re.sub(r"\s+", "_", name.strip())
+    return name.lower()
+
+
+def _to_pascal_case(name: str) -> str:
+    name = re.sub(r"[^\w\s]", "", name)
+    parts = name.strip().split()
+    return "".join(p.title() for p in parts)
+
+
+def create_plugin(plugin_name: str) -> Path:
+    """Create a new plugin file from the template.
+
+    Args:
+        plugin_name: Human-readable plugin name (e.g. "my check").
+
+    Returns:
+        Path to the created plugin file.
+    """
+    snake_name = _to_snake_case(plugin_name)
+    pascal_name = _to_pascal_case(plugin_name) + "Plugin"
+
+    plugins_dir = Path(__file__).resolve().parent / "plugins"
+    target = plugins_dir / f"{snake_name}.py"
+
+    if target.exists():
+        raise FileExistsError(f"Plugin file already exists: {target}")
+
+    content = PLUGIN_TEMPLATE.format(class_name=pascal_name, plugin_name=plugin_name)
+    target.write_text(content, encoding="utf-8")
+    return target
 
 
 def scan_directory(skill_dir: str) -> dict[str, list[Issue]]:

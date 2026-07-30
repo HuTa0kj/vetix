@@ -4,6 +4,7 @@ from typing import Annotated
 import typer
 
 from vetix.agent import skill_analyze
+from vetix.plugin import create_plugin
 from vetix.utils.banner import print_banner
 from vetix.utils.logger import set_debug
 
@@ -45,6 +46,22 @@ def scan(
     workspace = str(source.parent)
 
     result = skill_analyze(source, workspace, language)
+
+
+@app.command()
+def create(
+        plugin_name: Annotated[
+            str,
+            typer.Option("--plugin", "-p", help="Plugin name (e.g. \"my check\")"),
+        ],
+) -> None:
+    """Create a new plugin from the template."""
+    try:
+        target = create_plugin(plugin_name)
+        typer.echo(f"Plugin created: {target}")
+    except FileExistsError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":
