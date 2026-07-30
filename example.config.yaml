@@ -22,5 +22,3 @@ langsmith:
   endpoint: "https://api.smith.langchain.com"
   api_key: ""
   project: ""
-
-language: "en"
