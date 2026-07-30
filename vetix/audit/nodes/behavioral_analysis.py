@@ -3,7 +3,7 @@ from deepagents.backends import FilesystemBackend, CompositeBackend
 from langchain.agents.middleware import ModelCallLimitMiddleware, ToolRetryMiddleware
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from vetix.model import get_llm
+from vetix.llm import get_llm
 from vetix.audit.state import SkillSafeAuditState, BehavioralRiskItem, BehavioralAnalysisResult
 from vetix.middleware.tool_filter import ToolFilterMiddleware
 from vetix.utils.logger import logger

@@ -8,7 +8,7 @@ from deepagents.backends import FilesystemBackend
 from vetix.audit.state import SkillSafeAuditState, PluginsVerificationResult, RiskFinding
 from vetix.middleware.tool_filter import ToolFilterMiddleware
 from vetix.plugin import Issue
-from vetix.model import get_llm
+from vetix.llm import get_llm
 from vetix.utils.logger import logger
 from vetix.utils.utils import read_prompt, structured_response_repair
 
