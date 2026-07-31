@@ -113,6 +113,12 @@ uv run vetix scan -s ./examples/skills/malicious/pop-calc --debug
 # 使用中文输出
 uv run vetix scan -s ./examples/skills/malicious/pop-calc -l zh
 
+# 将审计报告保存到 ./output/<thread-id>/report.json
+uv run vetix scan -s ./examples/skills/malicious/pop-calc -o
+
+# 自定义输出目录
+uv run vetix scan -s ./examples/skills/malicious/pop-calc -o --output-dir ./reports
+
 # 创建新插件
 uv run vetix create --plugin "my check"
 ```

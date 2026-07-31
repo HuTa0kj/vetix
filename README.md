@@ -113,6 +113,12 @@ uv run vetix scan -s ./examples/skills/malicious/pop-calc --debug
 # Use Chinese output
 uv run vetix scan -s ./examples/skills/malicious/pop-calc -l zh
 
+# Save the audit report to ./output/<thread-id>/report.json
+uv run vetix scan -s ./examples/skills/malicious/pop-calc -o
+
+# Custom output directory
+uv run vetix scan -s ./examples/skills/malicious/pop-calc -o --output-dir ./reports
+
 # Create a new plugin
 uv run vetix create --plugin "my check"
 ```
