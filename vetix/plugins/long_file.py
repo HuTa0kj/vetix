@@ -21,6 +21,5 @@ class LongFileCheckPlugin(Plugin):
             severity=Severity.MEDIUM,
             description=f"An excessively long file, totaling {file_line} lines, was found in the SKILL directory.",
             file_path=relative_path,
-            suggestion="Extremely long text/script files may pose security risks; please review them carefully.",
             audit_required=False
         )]

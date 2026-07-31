@@ -17,6 +17,5 @@ class ConsecutiveNewlinesCheckPlugin(Plugin):
             severity=Severity.HIGH,
             description="The file contains a large number of consecutive newline characters, which may indicate the presence of malicious commands behind the newlines.",
             file_path=relative_path,
-            suggestion="Carefully examine the file and check for malicious instructions following consecutive newline characters.",
             audit_required=False
         )]

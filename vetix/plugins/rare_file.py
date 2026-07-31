@@ -18,6 +18,5 @@ class RareFileCheckPlugin(Plugin):
             severity=Severity.MEDIUM,
             description="The SKILL directory contains rare auxiliary files that may pose a security risk.",
             file_path=relative_path,
-            suggestion="Please check the file for malicious risks and whether it is necessary.",
             audit_required=False
         )]

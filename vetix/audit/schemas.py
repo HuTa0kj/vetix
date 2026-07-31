@@ -10,7 +10,6 @@ class RiskFinding(BaseModel):
         description="Risk description (directly state the problem, do not start with a line number)")
     severity: Severity = Field(description="Severity level (low, medium, high, critical)")
     file_path: str = Field(description="File path")
-    suggestion: str = Field(description="Risk assessment recommendations")
     line: int = Field(description="Line number")
 
 

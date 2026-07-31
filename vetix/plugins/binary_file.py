@@ -18,6 +18,5 @@ class BinaryFileCheckPlugin(Plugin):
             severity=Severity.HIGH,
             description="Suspicious binary files were found in the SKILL directory.",
             file_path=relative_path,
-            suggestion="Please carefully check the purpose of the binary file and verify the hash.",
             audit_required=False
         )]

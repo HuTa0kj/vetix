@@ -33,7 +33,6 @@ class PublicIPCheckPlugin(Plugin):
             severity=Severity.MEDIUM,
             description=f"Public IP addresses are often used as C2 addresses or as recipients of data breaches. {len(set(public_ips))} IP addresses were found: {set(public_ips)}",
             file_path=relative_path,
-            suggestion="Even if you check suspicious IP addresses, avoid making network connections.",
             audit_required=True
         ))
 

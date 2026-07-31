@@ -48,7 +48,6 @@ async def report(state: SkillSafeAuditState) -> dict:
         pt.add_column("File", overflow="fold")
         pt.add_column("Line", width=6, justify="right")
         pt.add_column("Description", overflow="fold")
-        pt.add_column("Suggestion", overflow="fold")
         for i, f in enumerate(plugin_findings, 1):
             sev = f.severity.value if hasattr(f.severity, "value") else str(f.severity)
             pt.add_row(
@@ -58,7 +57,6 @@ async def report(state: SkillSafeAuditState) -> dict:
                 f.file_path,
                 str(f.line),
                 f.description,
-                f.suggestion,
             )
         console.print(pt)
         console.print()

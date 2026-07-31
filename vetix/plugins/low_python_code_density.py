@@ -55,6 +55,5 @@ class LowPythonCodeDensityCheckPlugin(Plugin):
             severity=Severity.MEDIUM,
             description="Python files often have low effective code density and may contain distracting text.",
             file_path=relative_path,
-            suggestion="Check file contents to prevent the execution of code containing malicious instructions.",
             audit_required=False
         )]

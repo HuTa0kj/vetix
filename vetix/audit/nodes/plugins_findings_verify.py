@@ -27,7 +27,6 @@ async def plugins_findings_verify(state: SkillSafeAuditState) -> dict:
                 description=issue.description,
                 severity=issue.severity,
                 file_path=issue.file_path,
-                suggestion=issue.suggestion,
                 line=issue.line,
             ))
     if len(required_verify_findings) == 0:

@@ -18,6 +18,5 @@ class ExceptionalFileCheckPlugin(Plugin):
             severity=Severity.MEDIUM,
             description="A large number of abnormal characters were found in a file that should have been readable.",
             file_path=relative_path,
-            suggestion="Check for unusual characters in the file to prevent obfuscation attacks.",
             audit_required=False
         )]

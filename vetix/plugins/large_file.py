@@ -30,6 +30,5 @@ class LargeFileCheckPlugin(Plugin):
             severity=Severity.MEDIUM,
             description=f"SKILL file size {self.human_display(size)} exceeds limit of {self.human_display(self.max_bytes)}.",
             file_path=relative_path,
-            suggestion="Large files may contain hidden security risks; please review them carefully.",
             audit_required=False
         )]

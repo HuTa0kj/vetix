@@ -25,7 +25,6 @@ class Issue:
     description: str
     severity: Severity
     file_path: str
-    suggestion: str
     line: int | None = 0
     audit_required: bool = True
 
