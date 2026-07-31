@@ -27,7 +27,7 @@ def scan(
         ] = "en",
         output: Annotated[
             bool,
-            typer.Option("--output/--no-output", "-o", help="Save the audit report to a JSON file under <output-dir>/<thread-id>/ (default: on, use --no-output to disable)"),
+            typer.Option("--output/--no-output", "-o", help="Save the audit report to a JSON file under <output-dir>/<skill-hash-prefix>/ (default: on, use --no-output to disable)"),
         ] = True,
         output_dir: Annotated[
             Path,

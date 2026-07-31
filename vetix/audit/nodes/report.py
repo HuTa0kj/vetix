@@ -40,6 +40,13 @@ def _finding_to_dict(f, source: str) -> dict:
     }
 
 
+def _task_output_dir(state: SkillSafeAuditState) -> str:
+    """Directory that holds the report: <output-dir>/<first 16 chars of skill hash>."""
+    if state.directory_hash:
+        return os.path.join(state.output_dir, state.directory_hash[:16])
+    return state.output_dir
+
+
 def _build_report_data(state: SkillSafeAuditState) -> dict:
     plugin_findings = state.plugins_verify_findings or []
     llm_findings = state.llm_findings or []
@@ -57,7 +64,7 @@ def _build_report_data(state: SkillSafeAuditState) -> dict:
             "skill_name": state.skill_name or os.path.basename(state.skill_dir.rstrip(os.sep)),
             "skill_dir": state.skill_dir,
             "language": state.language or "en",
-            "output_dir": state.output_dir,
+            "output_dir": _task_output_dir(state),
             "skill_hash": state.directory_hash,
         },
         "summary": {
@@ -72,8 +79,9 @@ def _build_report_data(state: SkillSafeAuditState) -> dict:
 def _write_report_json(state: SkillSafeAuditState) -> str | None:
     if not state.save_output or not state.output_dir:
         return None
-    os.makedirs(state.output_dir, exist_ok=True)
-    path = os.path.join(state.output_dir, "report.json")
+    task_dir = _task_output_dir(state)
+    os.makedirs(task_dir, exist_ok=True)
+    path = os.path.join(task_dir, "report.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(_build_report_data(state), f, ensure_ascii=False, indent=2, default=str)
     logger.info(f"Report saved: {path}")

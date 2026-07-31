@@ -33,10 +33,8 @@ def skill_analyze(
     if output:
         base_dir = os.path.abspath(output_dir)
         os.makedirs(base_dir, exist_ok=True)
-        task_dir = os.path.join(base_dir, task_id)
-        os.makedirs(task_dir, exist_ok=True)
-        inputs["output_dir"] = task_dir
-        logger.info(f"Output will be saved to: {task_dir}")
+        inputs["output_dir"] = base_dir
+        logger.info(f"Output base directory: {base_dir}")
 
     workflow = skill_safe_audit_workflow()
     start_time = time.time()
