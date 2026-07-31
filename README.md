@@ -38,22 +38,15 @@ Traditional rule-based scanners rely on predefined patterns and signatures, whic
 - **Context-aware analysis** — Agents evaluate risks in the broader context of the entire SKILL, recognizing cross-file interactions and chained vulnerabilities that individual rules cannot capture.
 - **Natural-language explanations** — Every finding comes with a clear, human-readable explanation of the risk, impact, and recommended remediation — not just a rule ID.
 
-## Quick Start
+## Deployment
 
-### Prerequisites
-
-- Python ≥ 3.12
-- [uv](https://docs.astral.sh/uv/) (recommended package manager)
-
-### Installation
+### uv
 
 ```bash
 git clone git@github.com:HuTa0kj/vetix.git
 cd vetix
 uv sync
 ```
-
-### Configuration
 
 Copy the example config and fill in your model credentials:
 
@@ -98,29 +91,66 @@ langsmith:
 | `roles.pro` | Reasoning model, for tasks that require complex reasoning. |
 | `langsmith` | LangSmith tracing config (optional). |
 
-### Usage
+Common commands
 
 ```bash
 # Scan a SKILL directory
-uv run vetix scan --source ~/.claude/skills/skill-directory
+uv run vetix scan --source xxx
 
 # Short form
-uv run vetix scan -s ./examples/skills/malicious/pop-calc
+uv run vetix scan -s xxx
 
 # Enable debug logging
-uv run vetix scan -s ./examples/skills/malicious/pop-calc --debug
+uv run vetix scan -s xxx --debug
 
 # Use Chinese output
-uv run vetix scan -s ./examples/skills/malicious/pop-calc -l zh
+uv run vetix scan -s xxx -l zh
 
 # Only render the report in the terminal, do not save a JSON file
-uv run vetix scan -s ./examples/skills/malicious/pop-calc --no-output
+uv run vetix scan -s xxx --no-output
 
 # Custom output directory
-uv run vetix scan -s ./examples/skills/malicious/pop-calc --output-dir ./reports
+uv run vetix scan -s xxx --output-dir ./reports
 
 # Create a new plugin
 uv run vetix create --plugin "my check"
+```
+
+### Docker
+
+Run Vetix as a one-shot container without installing Python or `uv` on the host.
+
+Build the image
+
+```bash
+docker build -t vetix:latest .
+```
+
+Configuration
+
+Vetix reads `config.yaml` from a fixed in-container path (`/app/config.yaml`), using the same format as the uv option above. Prepare `config.yaml` on the host and bind-mount it read-only:
+
+```bash
+cp example.config.yaml config.yaml
+# edit config.yaml: fill in real api_key / base_url for both models
+```
+
+Run a scan
+
+```bash
+docker run --rm \
+  -v "$PWD/config.yaml:/app/config.yaml:ro" \
+  -v "$PWD/examples/skills/xxx:/skills/xxx:ro" \
+  -v "$PWD/output:/app/output" \
+  vetix:latest scan -s /skills/xxx
+```
+
+### Docker Compose
+
+`docker-compose.yml` binds `./config.yaml`, `./skills`, and `./output`. Put the skills you want to scan under `./skills/xxx`, then run:
+
+```bash
+docker compose run --rm vetix scan -s /skills/xxx
 ```
 
 ## Agent Tracing

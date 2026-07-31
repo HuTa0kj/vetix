@@ -63,3 +63,7 @@ See [example.config.yaml](./example.config.yaml) for the full template.
 - **Verify before reporting** — high-recall plugin hits are LLM-confirmed against real file content before reaching the report.
 - **Read-only by construction** — every agent runs in a virtual filesystem with explicit read allow-lists, a blanket write deny, and mutating tools stripped before each model call.
 - **Structured output with a repair net** — agents return Pydantic models; malformed tool calls fall back to `json_repair` so the pipeline still produces usable findings.
+
+## Guidelines
+
++ You should never read config.yaml. If you need to view the configuration file format, please refer to example.config.yaml.

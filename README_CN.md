@@ -38,14 +38,9 @@
 - **上下文感知分析** —— Agent 在整个 SKILL 的全局上下文中评估风险，识别单条规则无法捕获的跨文件交互和链式漏洞。
 - **自然语言解释** —— 每一项发现都附带清晰、易读的风险说明、影响评估和修复建议，而不仅仅是一个规则编号。
 
-## 快速开始
+## 部署运行
 
-### 环境要求
-
-- Python ≥ 3.12
-- [uv](https://docs.astral.sh/uv/)（推荐包管理工具）
-
-### 安装
+### uv
 
 ```bash
 git clone git@github.com:HuTa0kj/vetix.git
@@ -53,7 +48,6 @@ cd vetix
 uv sync
 ```
 
-### 配置
 
 复制示例配置文件并填写模型凭据：
 
@@ -98,29 +92,66 @@ langsmith:
 | `roles.pro` | 推理模型，适用于需要复杂推理的任务。 |
 | `langsmith` | LangSmith 追踪配置（可选）。 |
 
-### 使用
+常用命令
 
 ```bash
 # 扫描指定 SKILL 目录
-uv run vetix scan --source ~/.claude/skills/skill-directory
+uv run vetix scan --source xxx
 
 # 简写
-uv run vetix scan -s ./examples/skills/malicious/pop-calc
+uv run vetix scan -s xxx
 
 # 开启调试日志
-uv run vetix scan -s ./examples/skills/malicious/pop-calc --debug
+uv run vetix scan -s xxx --debug
 
 # 使用中文输出
-uv run vetix scan -s ./examples/skills/malicious/pop-calc -l zh
+uv run vetix scan -s xxx -l zh
 
 # 仅在终端展示报告，不保存 JSON 文件
-uv run vetix scan -s ./examples/skills/malicious/pop-calc --no-output
+uv run vetix scan -s xxx --no-output
 
 # 自定义输出目录
-uv run vetix scan -s ./examples/skills/malicious/pop-calc --output-dir ./reports
+uv run vetix scan -s xxx --output-dir ./reports
 
 # 创建新插件
 uv run vetix create --plugin "my check"
+```
+
+### Docker
+
+无需在宿主机安装 Python 或 `uv`，即可将 Vetix 作为一次性容器运行。
+
+构建镜像
+
+```bash
+docker build -t vetix:latest .
+```
+
+配置
+
+Vetix 从容器内固定路径（`/app/config.yaml`）读取配置，格式与方式一相同。请在宿主机准备 `config.yaml` 并以只读方式挂载：
+
+```bash
+cp example.config.yaml config.yaml
+# 编辑 config.yaml：为两个模型填入真实的 api_key / base_url
+```
+
+运行扫描
+
+```bash
+docker run --rm \
+  -v "$PWD/config.yaml:/app/config.yaml:ro" \
+  -v "$PWD/examples/skills/xxx:/skills/xxx:ro" \
+  -v "$PWD/output:/app/output" \
+  vetix:latest scan -s /skills/xxx
+```
+
+### Docker Compose
+
+`docker-compose.yml` 绑定 `./config.yaml`、`./skills` 与 `./output`。把要扫描的 skill 放到 `./skills/xxx` 下，然后运行：
+
+```bash
+docker compose run --rm vetix scan -s /skills/xxx
 ```
 
 ## Agent 追踪
