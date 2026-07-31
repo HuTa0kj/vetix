@@ -1,5 +1,4 @@
 import logging
-import os
 from datetime import datetime, timezone, timedelta
 
 from rich.console import Console
@@ -26,7 +25,6 @@ class _LogHighlighter(RegexHighlighter):
         r"(?P<dbg>\[DBG\])",
         r"(?P<inf>\[INF\])",
         r"(?P<wrn>\[WRN\])",
-        r"(?P<err>\[ERR\])",
         r"(?P<crt>\[CRT\])",
     ]
 
@@ -57,10 +55,9 @@ class _LevelFilter(logging.Filter):
 
 
 class Logger:
-    """Rich-powered logger with file and console handlers."""
+    """Rich-powered console logger."""
 
-    def __init__(self, debug: bool = False, log_dir: str = "./log") -> None:
-        self.debug_mode = debug
+    def __init__(self, debug: bool = False) -> None:
         self.logger = logging.getLogger("skill-scanner")
         self.logger.setLevel(logging.DEBUG if debug else logging.INFO)
 
@@ -68,13 +65,10 @@ class Logger:
         if self.logger.handlers:
             return
 
-        os.makedirs(log_dir, exist_ok=True)
-
         # Suppress noisy third-party loggers
         for name in ("httpx", "openai", "httpcore"):
             logging.getLogger(name).setLevel(logging.WARNING)
 
-        # --- Console handler (Rich) ---
         console = Console(theme=_LOG_THEME)
         console_handler = RichHandler(
             console=console,
@@ -88,13 +82,6 @@ class Logger:
         console_handler.addFilter(_LevelFilter())
         console_handler.setLevel(logging.DEBUG if debug else logging.INFO)
         self.logger.addHandler(console_handler)
-
-        # --- File handler (plain text) ---
-        log_file = os.path.join(log_dir, "agent.log")
-        file_handler = logging.FileHandler(log_file, mode="a", encoding="utf-8")
-        file_handler.setFormatter(_RichFormatter())
-        file_handler.setLevel(logging.DEBUG)
-        self.logger.addHandler(file_handler)
 
     def get_logger(self) -> logging.Logger:
         return self.logger
