@@ -33,6 +33,10 @@ def scan(
             Path,
             typer.Option("--output-dir", "-od", help="Base directory for saved reports (default: ./output)"),
         ] = Path("./output"),
+        force: Annotated[
+            bool,
+            typer.Option("--force", help="Ignore the cached report and force a full re-scan"),
+        ] = False,
 ) -> None:
     if debug:
         set_debug(True)
@@ -59,6 +63,7 @@ def scan(
         language,
         output=output,
         output_dir=str(output_dir),
+        force=force,
     )
 
 
