@@ -1,0 +1,41 @@
+# VCS / local tooling
+.git
+.gitignore
+.idea
+.vscode
+.claude
+.specify
+
+# Python / uv
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Lock file is regenerated in the image; also keeps the build context small
+uv.lock
+
+# Secrets — MUST never enter the build context
+config.yaml
+.env
+.envrc
+*.pem
+*.key
+
+# Local runtime state (bind-mounted at run time, not needed in the image)
+output/
+log/
+examples/
+
+# Docs/specs not needed at build or runtime
+specs/
+test/
+images/
+
+# OS cruft
+.DS_Store
+Thumbs.db

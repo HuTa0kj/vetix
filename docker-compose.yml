@@ -1,0 +1,11 @@
+services:
+  vetix:
+    build: .
+    image: vetix:latest
+    init: true                    # forward Ctrl+C (SIGINT) to the scan process
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro   # LLM credentials (required)
+      - ./skills:/skills:ro                 # skill directories to scan
+      - ./output:/app/output                # reports: report.json appears under ./output/
+    # One-shot CLI: never `docker compose up`. Use:
+    #   docker compose run --rm vetix scan -s /skills/<name>
