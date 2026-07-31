@@ -66,6 +66,7 @@ def _build_report_data(state: SkillSafeAuditState) -> dict:
             "language": state.language or "en",
             "output_dir": _task_output_dir(state),
             "skill_hash": state.directory_hash,
+            "file_number": state.file_number,
         },
         "summary": {
             "plugin_findings": len(plugin_findings),
@@ -88,8 +89,8 @@ def _write_report_json(state: SkillSafeAuditState) -> str | None:
     return path
 
 
-async def report(state: SkillSafeAuditState) -> dict:
-    """Render the final audit results to the terminal."""
+def render_report(state: SkillSafeAuditState) -> None:
+    """Render the audit results to the terminal (no file write)."""
     console = Console()
     skill_name = state.skill_name or state.skill_dir
     plugin_findings = state.plugins_verify_findings or []
@@ -169,6 +170,9 @@ async def report(state: SkillSafeAuditState) -> dict:
         f"{len(llm_findings)} behavioral findings"
     )
 
-    _write_report_json(state)
 
+async def report(state: SkillSafeAuditState) -> dict:
+    """Render the final audit results to the terminal and save the report."""
+    render_report(state)
+    _write_report_json(state)
     return {}

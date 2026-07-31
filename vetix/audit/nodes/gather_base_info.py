@@ -130,6 +130,13 @@ def _is_single_skill_file(file_path: str) -> bool:
     return False
 
 
+def get_skill_file_number(skill_dir: str) -> int:
+    """Total file count of a SKILL directory as recorded in audit reports."""
+    if _is_single_skill_file(skill_dir):
+        return 1
+    return get_tree_stats(_get_skill_structure(skill_dir))["total_files"]
+
+
 def _read_skill_content(file_path: str) -> str:
     with open(os.path.join(file_path, "SKILL.md"), "r", encoding="utf-8") as f:
         content = f.read()
