@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from dataclasses import dataclass
 from enum import Enum
+from typing import Literal
 
 
 class Severity(str, Enum):
@@ -17,6 +18,20 @@ class Severity(str, Enum):
     CRITICAL = "critical"
 
 
+RiskCategory = Literal[
+    "Remote Execution",
+    "Data Exfiltration",
+    "Persistence",
+    "Destructive",
+    "Obfuscation",
+    "Command Injection",
+    "Privilege Escalation",
+    "Sensitive File Access",
+    "Network Abuse",
+    "Prompt Injection",
+]
+
+
 @dataclass
 class Issue:
     """A single finding produced by a plugin."""
@@ -25,6 +40,7 @@ class Issue:
     description: str
     severity: Severity
     file_path: str
+    category: RiskCategory
     line: int | None = 0
     audit_required: bool = True
 

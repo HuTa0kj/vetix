@@ -53,6 +53,7 @@ class LowPythonCodeDensityCheckPlugin(Plugin):
         return [Issue(
             name="Low code density Python files",
             severity=Severity.MEDIUM,
+            category="Obfuscation",
             description="Python files often have low effective code density and may contain distracting text.",
             file_path=relative_path,
             audit_required=False

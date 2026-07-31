@@ -27,6 +27,7 @@ async def plugins_findings_verify(state: SkillSafeAuditState) -> dict:
                     name=issue.name,
                     description=issue.description,
                     severity=issue.severity,
+                    category=issue.category,
                     file_path=issue.file_path,
                     line=issue.line,
                 ))

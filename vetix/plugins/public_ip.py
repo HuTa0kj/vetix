@@ -31,6 +31,7 @@ class PublicIPCheckPlugin(Plugin):
         issues.append(Issue(
             name="Discover public IP address",
             severity=Severity.MEDIUM,
+            category="Network Abuse",
             description=f"Public IP addresses are often used as C2 addresses or as recipients of data breaches. {len(set(public_ips))} IP addresses were found: {set(public_ips)}",
             file_path=relative_path,
             audit_required=True

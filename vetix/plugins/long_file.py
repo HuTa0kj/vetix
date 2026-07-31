@@ -19,6 +19,7 @@ class LongFileCheckPlugin(Plugin):
         return [Issue(
             name="Extremely long file",
             severity=Severity.MEDIUM,
+            category="Obfuscation",
             description=f"An excessively long file, totaling {file_line} lines, was found in the SKILL directory.",
             file_path=relative_path,
             audit_required=False

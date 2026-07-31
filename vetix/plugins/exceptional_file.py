@@ -16,6 +16,7 @@ class ExceptionalFileCheckPlugin(Plugin):
         return [Issue(
             name="Exceptional file",
             severity=Severity.MEDIUM,
+            category="Obfuscation",
             description="A large number of abnormal characters were found in a file that should have been readable.",
             file_path=relative_path,
             audit_required=False

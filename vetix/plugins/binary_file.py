@@ -16,6 +16,7 @@ class BinaryFileCheckPlugin(Plugin):
         return [Issue(
             name="Binary file",
             severity=Severity.HIGH,
+            category="Obfuscation",
             description="Suspicious binary files were found in the SKILL directory.",
             file_path=relative_path,
             audit_required=False

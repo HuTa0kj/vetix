@@ -54,11 +54,26 @@ class RiskFinding(BaseModel):
     description: str = Field(
         description="Risk description (directly state the problem, do not start with a line number)")
     severity: Severity = Field(description="Severity level (low, medium, high, critical)")
+    category: RiskCategory = Field(description="Risk Classification")
     file_path: str = Field(description="File path")
     line: int = Field(description="Line number")
 
 class PluginsVerificationResult(BaseModel):
     findings: list[RiskFinding] = Field(description="Real risk items after plugin verification")
+
+# Category
+RiskCategory is an enumeration with the following values. For each confirmed hit, **select the most appropriate category based on the actual malicious behavior** (the plugin's hint is only a reference; when the behavior spans multiple categories, choose the one that best matches the ultimate harm):
+
+- `Remote Execution` — Remote code loading and execution, e.g. `curl | sh`, `wget | bash`, unofficial package sources.
+- `Data Exfiltration` — Unauthorized collection and transmission of sensitive data to external addresses.
+- `Persistence` — Backdoor mechanisms that survive reboots: crontab injection, SSH key planting, startup item modification.
+- `Destructive` — Actions that corrupt data, delete files, or otherwise damage the host system.
+- `Obfuscation` — Deliberate concealment of malicious payloads via Base64/Hex encoding, blank-line hiding, or disguised commands.
+- `Command Injection` — Injection of arbitrary shell commands through unsanitized input or instruction manipulation.
+- `Privilege Escalation` — Attempts to gain elevated permissions beyond what the skill's stated function requires.
+- `Sensitive File Access` — Unauthorized reading or writing of SSH keys, `.aws` credentials, API keys, tokens, passwords, browser data, `.env` files, and similar secrets.
+- `Network Abuse` — Suspicious outbound connections, C2 communication, or traffic to hard-coded external IPs/domains.
+- `Prompt Injection` — Instructions that rewrite agent behavior — "ignore previous instructions", "DAN mode", "forget everything", etc.
 
 # Constraints
 - All hits in the input must be covered; no omissions, merging, or additions are allowed.

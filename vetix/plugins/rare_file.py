@@ -16,6 +16,7 @@ class RareFileCheckPlugin(Plugin):
         return [Issue(
             name="Rare file",
             severity=Severity.MEDIUM,
+            category="Obfuscation",
             description="The SKILL directory contains rare auxiliary files that may pose a security risk.",
             file_path=relative_path,
             audit_required=False

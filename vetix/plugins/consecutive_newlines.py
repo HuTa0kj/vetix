@@ -15,6 +15,7 @@ class ConsecutiveNewlinesCheckPlugin(Plugin):
         return [Issue(
             name="Large number of consecutive line breaks",
             severity=Severity.HIGH,
+            category="Obfuscation",
             description="The file contains a large number of consecutive newline characters, which may indicate the presence of malicious commands behind the newlines.",
             file_path=relative_path,
             audit_required=False

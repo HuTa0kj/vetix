@@ -28,6 +28,7 @@ class LargeFileCheckPlugin(Plugin):
         return [Issue(
             name="Large SKILL file found",
             severity=Severity.MEDIUM,
+            category="Obfuscation",
             description=f"SKILL file size {self.human_display(size)} exceeds limit of {self.human_display(self.max_bytes)}.",
             file_path=relative_path,
             audit_required=False

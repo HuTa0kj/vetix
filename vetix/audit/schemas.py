@@ -1,7 +1,7 @@
 from typing import List, Literal
 from pydantic import BaseModel, Field
 
-from vetix.plugin import Severity
+from vetix.plugin import Severity, RiskCategory
 
 
 class RiskFinding(BaseModel):
@@ -9,6 +9,7 @@ class RiskFinding(BaseModel):
     description: str = Field(
         description="Risk description (directly state the problem, do not start with a line number)")
     severity: Severity = Field(description="Severity level (low, medium, high, critical)")
+    category: RiskCategory = Field(description="Risk Classification")
     file_path: str = Field(description="File path")
     line: int = Field(description="Line number")
 
@@ -28,18 +29,7 @@ class BehavioralAnalysisResult(BaseModel):
 
 class BehavioralRiskItem(BaseModel):
     """Risk of a single action"""
-    category: Literal[
-        "Remote Execution",
-        "Data Exfiltration",
-        "Persistence",
-        "Destructive",
-        "Obfuscation",
-        "Command Injection",
-        "Privilege Escalation",
-        "Sensitive File Access",
-        "Network Abuse",
-        "Prompt Injection",
-    ] = Field(description="Risk Classification")
+    category: RiskCategory = Field(description="Risk Classification")
     severity: Literal["low", "medium", "high", "critical"] = Field(description="Severity level")
     file_path: str = Field(description="The file path where the risk is located (relative to the SKILL directory)")
     line_number: int = Field(default=0, description="Line number; enter 0 if unsure.")
