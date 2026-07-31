@@ -14,19 +14,18 @@ An LLM-agent-based scanner for [SKILL](https://docs.claude.com/en/docs/claude-co
 
 ## Detection Categories
 
-The behavioral analysis agent classifies risks into 11 categories:
+The behavioral analysis agent classifies risks into 10 categories:
 
 | Category | Description |
 |---|---|
 | Remote Execution | Remote code loading and execution, including `curl\|sh`, `wget\|bash`, and unofficial package installations |
 | Data Exfiltration | Unauthorized collection and transmission of sensitive data to external addresses |
-| Secret Access | Theft or exposure of credentials such as API keys, tokens, and passwords |
 | Persistence | Backdoor mechanisms that survive reboots — crontab injection, SSH key planting, startup item modification |
 | Destructive | Actions that corrupt data, delete files, or otherwise damage the host system |
 | Obfuscation | Deliberate concealment of malicious payloads via Base64/Hex encoding, blank-line hiding, or disguised commands |
 | Command Injection | Injection of arbitrary shell commands through unsanitized input or instruction manipulation |
 | Privilege Escalation | Attempts to gain elevated permissions beyond what the skill's stated function requires |
-| Sensitive File Access | Unauthorized reading or writing of SSH keys, `.aws` credentials, browser data, `.env` files, and similar secrets |
+| Sensitive File Access | Unauthorized reading or writing of SSH keys, `.aws` credentials, API keys, tokens, passwords, browser data, `.env` files, and similar secrets |
 | Network Abuse | Suspicious outbound connections, C2 communication, or traffic to hard-coded external IPs/domains |
 | Prompt Injection | Instructions that rewrite agent behavior — "ignore previous instructions", "DAN mode", "forget everything", etc. |
 
