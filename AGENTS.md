@@ -10,6 +10,7 @@ End-user docs live in [README.md](./README.md) / [README_CN.md](./README_CN.md).
 vetix/
   cli.py                Typer entry point — `vetix scan`
   agent.py              Orchestrator — builds the workflow, runs it
+  cache.py              Loads a previously saved report.json (cache-hit fast path)
   config.py             YAML config loader (cached, sets LangSmith env)
   model.py              Role → ChatOpenAI factory (`get_llm`)
   plugin.py             Plugin ABC, Issue/Severity types, plugin loader
@@ -34,10 +35,12 @@ gather_base_info → plugins_check → plugins_findings_verify → behavioral_an
 
 State is shared via `SkillSafeAuditState` (Pydantic). Each node returns a dict that merges into state; there are no conditional edges.
 
+Scans short-circuit on a cache hit: before the workflow is built, `agent.py` compares `directory_hash[:16]` (computed by `gather_base_info`) against the subdirectories of the output directory and, if `<output-dir>/<hash[:16]>/report.json` exists, loads it back into state and renders it instead of running the pipeline. `--force` bypasses the cache.
+
 - `plugins_check` runs every plugin in `vetix/plugins/` against every file.
 - `plugins_findings_verify` re-judges plugin hits against the real file content with an LLM (role `lite`).
 - `behavioral_analysis` runs an LLM agent (role `pro`) over the skill to catch risks the rules miss. Single-file SKILLs take a fast path with no filesystem tools.
-- `report` renders findings to the terminal.
+- `report` renders findings to the terminal (via `render_report`) and writes `report.json` to `<output-dir>/<directory_hash[:16]>/`.
 
 ## Extension Points
 
