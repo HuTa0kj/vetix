@@ -44,8 +44,8 @@ async def report(state: SkillSafeAuditState) -> dict:
         pt = Table(title="[bold]Plugin Findings", border_style="yellow", show_lines=True)
         pt.add_column("#", style="dim", width=3)
         pt.add_column("Severity", width=10)
-        pt.add_column("Category", width=20, overflow="fold")
         pt.add_column("Name", width=28, overflow="fold")
+        pt.add_column("Category", width=20, overflow="fold")
         pt.add_column("File", overflow="fold")
         pt.add_column("Line", width=6, justify="right")
         pt.add_column("Description", overflow="fold")
@@ -54,8 +54,8 @@ async def report(state: SkillSafeAuditState) -> dict:
             pt.add_row(
                 str(i),
                 f"[{_sev_style(f.severity)}]{sev}[/]",
-                f.category,
                 f.name,
+                f.category,
                 f.file_path,
                 str(f.line),
                 f.description,
@@ -71,8 +71,8 @@ async def report(state: SkillSafeAuditState) -> dict:
         lt = Table(title="[bold]Behavioral Analysis Findings", border_style="magenta", show_lines=True)
         lt.add_column("#", style="dim", width=3)
         lt.add_column("Severity", width=10)
-        lt.add_column("Category", width=20, overflow="fold")
         lt.add_column("Name", width=28, overflow="fold")
+        lt.add_column("Category", width=20, overflow="fold")
         lt.add_column("File", overflow="fold")
         lt.add_column("Line", width=6, justify="right")
         lt.add_column("Description", overflow="fold")
@@ -80,8 +80,8 @@ async def report(state: SkillSafeAuditState) -> dict:
             lt.add_row(
                 str(i),
                 f"[{_sev_style(f.severity)}]{f.severity}[/]",
-                f.category,
                 f.name,
+                f.category,
                 f.file_path,
                 str(f.line_number),
                 f.description,
