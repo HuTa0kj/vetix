@@ -22,13 +22,14 @@ async def plugins_findings_verify(state: SkillSafeAuditState) -> dict:
         for issue in issues:
             if issue.audit_required:
                 required_verify_findings.append(issue)
-            plugins_verify_findings.append(RiskFinding(
-                name=issue.name,
-                description=issue.description,
-                severity=issue.severity,
-                file_path=issue.file_path,
-                line=issue.line,
-            ))
+            else:
+                plugins_verify_findings.append(RiskFinding(
+                    name=issue.name,
+                    description=issue.description,
+                    severity=issue.severity,
+                    file_path=issue.file_path,
+                    line=issue.line,
+                ))
     if len(required_verify_findings) == 0:
         logger.info(f"Plugin has been found to have {len(plugins_verify_findings)} security risks.")
         return {
