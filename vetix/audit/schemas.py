@@ -29,17 +29,16 @@ class BehavioralAnalysisResult(BaseModel):
 class BehavioralRiskItem(BaseModel):
     """Risk of a single action"""
     category: Literal[
-        "remote_execution",
-        "data_exfiltration",
-        "secret_access",
-        "persistence",
-        "destructive",
-        "obfuscation",
-        "command_injection",
-        "privilege_escalation",
-        "sensitive_file_access",
-        "network_abuse",
-        "prompt_injection",
+        "Remote Execution",
+        "Data Exfiltration",
+        "Persistence",
+        "Destructive",
+        "Obfuscation",
+        "Command Injection",
+        "Privilege Escalation",
+        "Sensitive File Access",
+        "Network Abuse",
+        "Prompt Injection",
     ] = Field(description="Risk Classification")
     severity: Literal["low", "medium", "high", "critical"] = Field(description="Severity level")
     file_path: str = Field(description="The file path where the risk is located (relative to the SKILL directory)")
