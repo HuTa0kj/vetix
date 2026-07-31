@@ -25,6 +25,14 @@ def scan(
             str,
             typer.Option("--language", "-l", help="Output language for the audit report (e.g. en, zh)"),
         ] = "en",
+        output: Annotated[
+            bool,
+            typer.Option("--output", "-o", help="Save the audit report to a JSON file under <output-dir>/<thread-id>/"),
+        ] = False,
+        output_dir: Annotated[
+            Path,
+            typer.Option("--output-dir", "-od", help="Base directory for saved reports (default: ./output)"),
+        ] = Path("./output"),
 ) -> None:
     if debug:
         set_debug(True)
@@ -45,7 +53,13 @@ def scan(
     print_banner()
     workspace = str(source.parent)
 
-    result = skill_analyze(source, workspace, language)
+    result = skill_analyze(
+        source,
+        workspace,
+        language,
+        output=output,
+        output_dir=str(output_dir),
+    )
 
 
 @app.command()

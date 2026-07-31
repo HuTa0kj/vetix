@@ -29,5 +29,7 @@ class SkillSafeAuditState(BaseModel):
     llm_findings: list[BehavioralRiskItem] = Field(default_factory=list)
 
     output_dir: str = ""
+    save_output: bool = False
+    detected_at: str = ""
     language: str = "en"
     error: str | None = None
