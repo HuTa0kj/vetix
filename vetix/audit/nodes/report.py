@@ -58,6 +58,7 @@ def _build_report_data(state: SkillSafeAuditState) -> dict:
             "skill_dir": state.skill_dir,
             "language": state.language or "en",
             "output_dir": state.output_dir,
+            "skill_hash": state.directory_hash,
         },
         "summary": {
             "plugin_findings": len(plugin_findings),

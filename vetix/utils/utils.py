@@ -1,3 +1,4 @@
+import hashlib
 import os
 from pathlib import PurePath
 
@@ -11,6 +12,36 @@ from vetix import __version__
 
 def get_version() -> str:
     return __version__
+
+
+def compute_directory_hash(directory: str) -> str:
+    """Compute a content-based SHA-256 over all files in *directory*.
+
+    Each file contributes its path (relative to *directory*) and the SHA-256 of
+    its content, so the directory hash changes when any file's content or name
+    changes. Directory listing order is normalized (sorted) for determinism.
+    Unreadable files are skipped.
+    """
+    digests = []
+    for root, dirs, files in os.walk(directory):
+        dirs.sort()
+        for name in sorted(files):
+            path = os.path.join(root, name)
+            rel = os.path.relpath(path, directory)
+            try:
+                digests.append(f"{rel}:{_file_sha256(path)}")
+            except OSError:
+                continue
+    combined = "\n".join(digests).encode("utf-8")
+    return hashlib.sha256(combined).hexdigest()
+
+
+def _file_sha256(path: str) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def get_file_extension(path: str | os.PathLike) -> str:

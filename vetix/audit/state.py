@@ -21,6 +21,7 @@ class SkillSafeAuditState(BaseModel):
     single_skill_file: bool = False
     file_number: int = 0
     skill_content: str = ""
+    directory_hash: str = ""
 
     plugins_check_findings: dict[str, list[Issue]] = Field(default_factory=dict)
 
