@@ -119,8 +119,6 @@ uv run vetix create --plugin "my check"
 
 ### Docker
 
-无需在宿主机安装 Python 或 `uv`，即可将 Vetix 作为一次性容器运行。
-
 构建镜像
 
 ```bash
@@ -128,8 +126,6 @@ docker build -t vetix:latest .
 ```
 
 配置
-
-Vetix 从容器内固定路径（`/app/config.yaml`）读取配置，格式与方式一相同。请在宿主机准备 `config.yaml` 并以只读方式挂载：
 
 ```bash
 cp example.config.yaml config.yaml
@@ -147,8 +143,6 @@ docker run --rm \
 ```
 
 ### Docker Compose
-
-`docker-compose.yml` 绑定 `./config.yaml`、`./skills` 与 `./output`。把要扫描的 skill 放到 `./skills/xxx` 下，然后运行：
 
 ```bash
 docker compose run --rm vetix scan -s /skills/xxx

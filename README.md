@@ -118,8 +118,6 @@ uv run vetix create --plugin "my check"
 
 ### Docker
 
-Run Vetix as a one-shot container without installing Python or `uv` on the host.
-
 Build the image
 
 ```bash
@@ -127,8 +125,6 @@ docker build -t vetix:latest .
 ```
 
 Configuration
-
-Vetix reads `config.yaml` from a fixed in-container path (`/app/config.yaml`), using the same format as the uv option above. Prepare `config.yaml` on the host and bind-mount it read-only:
 
 ```bash
 cp example.config.yaml config.yaml
@@ -146,8 +142,6 @@ docker run --rm \
 ```
 
 ### Docker Compose
-
-`docker-compose.yml` binds `./config.yaml`, `./skills`, and `./output`. Put the skills you want to scan under `./skills/xxx`, then run:
 
 ```bash
 docker compose run --rm vetix scan -s /skills/xxx
