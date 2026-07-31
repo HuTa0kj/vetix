@@ -20,13 +20,16 @@ def skill_safe_audit_workflow():
     graph.add_node("plugins_check", plugins_check)
     graph.add_node("plugins_findings_verify", plugins_findings_verify)
     graph.add_node("behavioral_analysis", behavioral_analysis)
-    graph.add_node("report", report)
+    graph.add_node("report", report, defer=True)
 
     # edge
     graph.add_edge(START, "gather_base_info")
     graph.add_edge("gather_base_info", "plugins_check")
+
     graph.add_edge("plugins_check", "plugins_findings_verify")
-    graph.add_edge("plugins_findings_verify", "behavioral_analysis")
+    graph.add_edge("plugins_findings_verify", "report")
+
+    graph.add_edge("plugins_check", "behavioral_analysis")
     graph.add_edge("behavioral_analysis", "report")
     graph.add_edge("report", END)
 
