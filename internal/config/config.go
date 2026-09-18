@@ -16,13 +16,12 @@ type Model struct {
 	ExtraHeader map[string]string `yaml:"extra_headers"`
 	Temperature *float32          `yaml:"temperature"`
 	// Thinking 控制是否在请求体里注入 {"thinking": {"type": "enabled"}}。
-	// Python 版因为流程简单，两个角色都固定关闭思考。Go 版按角色给默认值：
-	// 行为分析（pro）开启、命中验证（lite）关闭——思考会显著抬高 token 与
-	// 延迟，而 agent 循环最多允许 50 次模型调用。显式配置可覆盖默认。
+	// 默认按角色取值：行为分析（pro）开启、命中验证（lite）关闭——思考会显著
+	// 抬高 token 与延迟，而 agent 循环最多允许 50 次模型调用。显式配置可覆盖默认。
 	Thinking *bool `yaml:"thinking"`
 	// ResponseFormat 选择结构化输出的实现方式，取值为 "tool" 或 "json_schema"。
-	// 默认 "tool"（forced tool call，与 Python 的 LangChain ToolStrategy 等价）；
-	// 网关支持 json_schema 时可设为 "json_schema"，仅影响单文件快速路径。
+	// 默认 "tool"（强制工具调用）；网关支持 json_schema 时可设为 "json_schema"，
+	// 仅影响单文件快速路径。
 	ResponseFormat string `yaml:"response_format"`
 }
 

@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// 目录树与哈希必须与 Python 版逐条一致：前者直接进提示词，后者决定缓存目录。
+// 目录树与哈希的形状不能变：前者直接进提示词，后者决定缓存目录。
 // 这些断言固定在几个已知形状上。
 func TestTreeShape(t *testing.T) {
 	dir := t.TempDir()
@@ -24,8 +24,8 @@ func TestTreeShape(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// 顶部多一层 "."，一级子目录是它的兄弟键而不是嵌套在里面——这是 pstruc 的
-	// 输出形状，提示词就是照着它的 repr 写的。
+	// 顶部多一层 "."，一级子目录是它的兄弟键而不是嵌套在里面——提示词就是照着
+	// 这个形状写的。
 	if _, ok := tree["."]; !ok {
 		t.Fatalf("tree must keep the '.' root, got %v", tree)
 	}
@@ -53,8 +53,8 @@ func TestTreeShape(t *testing.T) {
 }
 
 func TestExtMatchesSplitext(t *testing.T) {
-	// Python 的 os.path.splitext 对以点开头的文件名不返回扩展名，所以 .env 会被
-	// 判为 rare file，.env.txt 则是 .txt。
+	// 以点开头的文件名不返回扩展名，所以 .env 会被判为 rare file，
+	// .env.txt 则是 .txt。
 	cases := map[string]string{
 		".env":     "",
 		".env.txt": ".txt",
@@ -76,7 +76,7 @@ func TestExtMatchesSplitext(t *testing.T) {
 }
 
 func TestSplitLinesAndNonText(t *testing.T) {
-	// Python 的 str.splitlines() 对末尾换行不产生额外空行。
+	// 末尾换行不产生额外空行。
 	if n := len(SplitLines("a\nb\n")); n != 2 {
 		t.Errorf("trailing newline must not add a line, got %d", n)
 	}

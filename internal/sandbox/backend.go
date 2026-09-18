@@ -22,10 +22,9 @@ var ErrReadOnly = errors.New("read-only backend: write operations are not permit
 // New 构造只读沙箱。root 是 skill 的父目录（workspace），allow 是允许读取的
 // 虚拟路径前缀（如 "/my-skill"）；skillFS 提供 /skills/** 下的内嵌 helper skill。
 //
-// 权限必须在这里强制，因为两端框架的"权限"都不是执行边界：eino 的 ToolInfos
+// 权限必须在这里强制，因为上游框架的"权限"都不是执行边界：eino 的 ToolInfos
 // 过滤只影响模型可见的工具列表，模型幻觉调用被隐藏的工具时 dispatch 仍按
-// ToolsNodeConfig.Tools 查名字并执行；Python 版 deepagents 的 FilesystemPermission
-// 在无规则匹配时默认 allow。
+// ToolsNodeConfig.Tools 查名字并执行。
 func New(root string, allow []string, skillFS fs.FS) *Backend {
 	return &Backend{root: root, allow: allow, skillFS: skillFS}
 }
@@ -49,8 +48,8 @@ func (b *Backend) virtual(p string) (string, error) {
 	if clean == "." {
 		clean = "/"
 	}
-	// Python 版的 _resolve_path 用子串判断 ".."，会误拒文件名里含 ".." 的合法
-	// 路径；这里用 path.Clean 之后的前缀判断，等价于拒绝真正的向上穿越。
+	// 用 path.Clean 之后的前缀判断而非子串判断：否则文件名里含 ".." 的合法路径
+	// 会被误拒，而真正的向上穿越又拦不住。
 	if clean == "/.." || strings.HasPrefix(clean, "/../") {
 		return "", fmt.Errorf("path traversal not allowed: %q", p)
 	}
@@ -87,9 +86,8 @@ func (b *Backend) resolve(ctx context.Context, p string) (string, error) {
 	return full, nil
 }
 
-// noSymlink 从 root 起逐段 Lstat，拒绝路径中任意一段是符号链接。
-// Python 版的 root 是 skill 的父目录且会 resolve symlink，恶意 SKILL 放一个
-// 指向兄弟目录的软链就能读到 skill 之外的内容；Go 版必须堵掉。
+// noSymlink 从 root 起逐段 Lstat，拒绝路径中任意一段是符号链接。root 是 skill
+// 的父目录，恶意 SKILL 只要放一个指向兄弟目录的软链就能读到 skill 之外的内容。
 func (b *Backend) noSymlink(full string) error {
 	rel, err := filepath.Rel(b.root, full)
 	if err != nil {

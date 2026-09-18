@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# 交叉编译四个目标。版本号是 runner/version.go 里的常量，不经 ldflags 注入。
-
 # macOS Intel (x86_64)
 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o ./vetix-mac-amd64 ./cmd/vetix
 

@@ -9,7 +9,8 @@ import (
 	"unicode/utf8"
 )
 
-// AllowedExt 来自 OpenClaw 的上传白名单，与 Python 版逐项一致。
+// AllowedExt 是"正常文件"的扩展名白名单：不在表内的扩展名一律按风险文件处理。
+// 增删条目会直接改变插件的命中集合。
 var AllowedExt = map[string]bool{
 	".md": true, ".mdx": true, ".txt": true, ".json": true, ".json5": true,
 	".yaml": true, ".yml": true, ".toml": true,
@@ -21,9 +22,9 @@ var AllowedExt = map[string]bool{
 	".html": true, ".css": true, ".scss": true, ".sass": true,
 }
 
-// Ext 复刻 Python 的 os.path.splitext 语义：以点开头的文件名本身不算扩展名，
-// 所以 ".env" 的扩展名是空串（会被判为 rare file），而 ".env.txt" 是 ".txt"。
-// Go 的 path.Ext 会把 ".env" 返回 ".env"，语义不同，不能用。
+// Ext 取小写扩展名：以点开头的文件名本身不算扩展名，所以 ".env" 的扩展名是空串
+// （会被判为 rare file），而 ".env.txt" 是 ".txt"。Go 的 path.Ext 会把 ".env"
+// 返回 ".env"，语义不同，不能用。
 func Ext(filePath string) string {
 	base := filepath.Base(filePath)
 	i := strings.LastIndex(base, ".")
@@ -37,7 +38,7 @@ func IsRiskFile(filePath string) bool {
 	return !AllowedExt[Ext(filePath)]
 }
 
-// textChars 复刻 Python 版的字节集合：
+// textChars 是允许出现在文本文件里的字节集合：
 // {7,8,9,10,12,13,27} | (range(0x20,0x100) - {0x7f})
 var textChars [256]bool
 
@@ -82,9 +83,8 @@ func IsBinaryFile(filePath string) bool {
 	return ExistNonText(chunk)
 }
 
-// DecodeReplace 复刻 Python 的 read_text(encoding="utf-8", errors="replace")：
-// 非法字节被替换成 U+FFFD，因此字节长度可能与磁盘上的原始长度不同。
-// 插件里凡是用到"文件大小/行数"的地方都必须走这个函数，否则与 Python 不一致。
+// DecodeReplace 按 UTF-8 解码，非法字节替换成 U+FFFD，因此字节长度可能与磁盘上的
+// 原始长度不同。插件里凡是用到"文件大小/行数"的地方都必须走这个函数。
 func DecodeReplace(raw []byte) string {
 	if utf8.Valid(raw) {
 		return string(raw)
@@ -104,7 +104,7 @@ func DecodeReplace(raw []byte) string {
 	return sb.String()
 }
 
-// SplitLines 对齐 Python str.splitlines()：末尾换行不产生额外空行，
+// SplitLines 按 Unicode 行边界切分：末尾换行不产生额外空行，
 // \r\n / \r / \v / \f / \x1c-\x1e / \x85 / \u2028 / \u2029 都算换行。
 func SplitLines(s string) []string {
 	if s == "" {
@@ -139,7 +139,7 @@ func isLineBreak(r rune) bool {
 	return false
 }
 
-// HumanBytes 对齐 Python 插件的 human_display 输出格式。
+// HumanBytes 以 1024 为进制渲染文件大小，输出形如 "1.5 KB"。
 func HumanBytes(n int) string {
 	switch {
 	case n < 1024:
@@ -151,8 +151,7 @@ func HumanBytes(n int) string {
 	}
 }
 
-// CleanVirtual 把路径统一成以 / 开头的斜杠形式，用于与 Python 的
-// os.path.relpath 输出对齐。
+// CleanVirtual 把路径统一成以 / 开头的斜杠形式。
 func CleanVirtual(p string) string {
 	return path.Clean(filepath.ToSlash(p))
 }

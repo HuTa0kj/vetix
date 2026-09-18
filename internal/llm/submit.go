@@ -12,19 +12,18 @@ import (
 	"github.com/cloudwego/eino/schema"
 )
 
-// 提交工具的名字直接取 Python 侧结构化输出的类名。这个约定来自 LangChain：
-// with_structured_output 的实现就是造一个以 schema 类名命名的伪工具，json_schema
-// 模式下该名字也会作为 schema 名下发给模型。
+// 提交工具的名字取结构化输出 schema 的类名。这也是 json_schema 模式下下发给
+// 模型的 schema 名，两者必须一致。
 const (
 	SubmitVerifyTool = "PluginsVerificationResult"
 	SubmitBehavTool  = "BehavioralAnalysisResult"
 )
 
-// SubmitInstruction 是相对 Python 版必须补的一段话。
+// SubmitInstruction 是提示词之外必须补的一段说明。
 //
-// Python 用 LangChain 的 ToolStrategy，由框架负责让模型知道要调用提交工具；eino
-// 没有等价机制，工具只是出现在工具列表里。在不动既有提示词文件的前提下，只能靠
-// Instruction 补说明，否则模型探索完会直接输出自由文本而不提交。
+// eino 没有"框架负责让模型知道要调用提交工具"的等价机制，提交工具只是出现在工具
+// 列表里。在不动既有提示词文件的前提下，只能靠 Instruction 补说明，否则模型探索
+// 完会直接输出自由文本而不提交。
 const SubmitInstruction = "\n\nWhen you have finished the analysis, call the `%s` tool exactly once with all confirmed findings. Do not output the result as plain text."
 
 // Collector 保存提交工具收到的原始参数 JSON。

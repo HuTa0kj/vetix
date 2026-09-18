@@ -42,7 +42,7 @@
 
 ### 编译
 
-需要 Go 1.25 及以上。本机访问 `proxy.golang.org` 不通，仓库按 `goproxy.cn` 配置：
+需要 Go 1.25 及以上：
 
 ```bash
 git clone git@github.com:HuTa0kj/vetix.git
@@ -50,7 +50,7 @@ cd vetix
 go build -o vetix ./cmd/vetix
 ```
 
-提示词与 helper skill 通过 `//go:embed` 编进二进制，可执行文件自包含。需要四个平台的产物时执行 `./build.sh`。
+提示词与 helper skill 通过 `//go:embed` 编进二进制，可执行文件自包含。`./build.sh` 可一次产出 macOS、Linux、Windows 的发布二进制。
 
 复制配置模板并填入模型凭据：
 
@@ -99,9 +99,9 @@ langsmith:
 | `models[].response_format` | `tool`（默认）用强制具名工具调用来拿结构化输出；`json_schema` 使用网关原生的 `response_format`。 |
 | `roles.lite` | 轻量模型，用于插件命中复核。 |
 | `roles.pro` | 推理模型，用于行为分析。 |
-| `langsmith` | LangSmith 追踪配置（可选）。注意 eino 的 span 结构与 LangChain 不同，历史追踪记录无法互相对照。 |
+| `langsmith` | LangSmith 追踪配置（可选）。注意 eino 的 span 结构与 LangChain 不同，在 LangSmith 界面上看到的形态也与之有别。 |
 
-常用命令
+### 常用命令
 
 ```bash
 # 扫描一个 SKILL 目录

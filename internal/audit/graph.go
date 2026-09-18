@@ -8,7 +8,7 @@ import (
 	"vetix/internal/llm"
 )
 
-// 节点名与 Python 的 graph.py 同名，便于对照排查。
+// 节点名同时出现在流程图与调试日志里。
 const (
 	nodeGather   = "gather_base_info"
 	nodePlugins  = "plugins_check"
@@ -19,7 +19,7 @@ const (
 
 // Workflow 构建并编译审计工作流。
 //
-// 拓扑与 Python 版一致：gather → plugins → {verify, behavioral} → report。
+// 拓扑：gather → plugins → {verify, behavioral} → report。
 //
 // 图的数据类型统一用 map[string]any：compose 的 fan-in 合并函数只内置支持 map
 // （以及显式注册过的类型），report 有两个前驱，用标量类型会在汇聚点直接报

@@ -1,4 +1,4 @@
-// Package pytext 复刻 Python 文本格式化，只用于构造喂给模型的提示词。
+// Package pytext 生成 Python 字面量风格的文本，只用于构造喂给模型的提示词。
 //
 // 这些格式看起来很脏（单引号、多一层根、枚举的 <Severity.CRITICAL: 'critical'>
 // 写法），但既有提示词就是在这套文本上调优的，改动会让模型行为无迹可循。
@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-// Quote 复刻 Python 的 repr() 对字符串的处理。
+// Quote 按 Python repr() 的规则加引号并转义。
 func Quote(s string) string {
 	var sb strings.Builder
 	sb.WriteByte('\'')
@@ -35,8 +35,7 @@ func Quote(s string) string {
 	return sb.String()
 }
 
-// StrDict 渲染单层字典，键按 Python 的插入顺序不可复现，这里固定按字典序，
-// 保证同一输入的提示词文本稳定。
+// StrDict 渲染单层字典，键按字典序输出，保证同一输入的提示词文本稳定。
 func StrDict(m map[string]any) string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -85,7 +84,7 @@ func Value(v any) string {
 	}
 }
 
-// EnumValue 复刻 Python Enum 的 repr，例如 <Severity.CRITICAL: 'critical'>。
+// EnumValue 按 Python Enum 的 repr 渲染，例如 <Severity.CRITICAL: 'critical'>。
 func EnumValue(enumName, member, value string) string {
 	return fmt.Sprintf("<%s.%s: %s>", enumName, member, Quote(value))
 }

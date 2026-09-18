@@ -7,7 +7,7 @@ import (
 	"vetix/internal/pytext"
 )
 
-// severityMember 给出 Python 枚举成员名，用于构造与 Python 一致的 repr。
+// severityMember 给出枚举成员名，用于构造 <Severity.CRITICAL: 'critical'> 形式。
 func severityMember(s plugin.Severity) string {
 	switch s {
 	case plugin.SeverityInfo:
@@ -24,13 +24,12 @@ func severityMember(s plugin.Severity) string {
 	return strings.ToUpper(string(s))
 }
 
-// IssueRepr 复刻 Issue dataclass 的 repr：
+// IssueRepr 按 dataclass 风格渲染一条命中：
 //
 //	Issue(name='x', description='y', severity=<Severity.CRITICAL: 'critical'>,
 //	      file_path='p', category='Remote Execution', line=1, audit_required=True)
 //
-// 字段顺序必须与 Python dataclass 的声明顺序一致，因为这段文本会作为
-// "Hit list" 直接进入复核提示词。
+// 字段顺序不能改，因为这段文本会作为 "Hit list" 直接进入复核提示词。
 func IssueRepr(i plugin.Issue) string {
 	var sb strings.Builder
 	sb.WriteString("Issue(name=")
@@ -51,7 +50,7 @@ func IssueRepr(i plugin.Issue) string {
 	return sb.String()
 }
 
-// IssueListRepr 复刻 f"{list_of_issues}" 的输出，即 Python 的列表 repr。
+// IssueListRepr 把命中列表渲染成 [Issue(...), Issue(...)] 的形式。
 func IssueListRepr(issues []plugin.Issue) string {
 	parts := make([]string, 0, len(issues))
 	for _, i := range issues {

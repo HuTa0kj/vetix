@@ -2,7 +2,7 @@ package jsonx
 
 import "testing"
 
-// 弱模型给出的结构化输出经常是畸形 JSON，这一层是 Python 版 json_repair 的替代。
+// 弱模型给出的结构化输出经常是畸形 JSON，这一层负责把它们尽量修回合法 JSON。
 func TestUnmarshalRepairs(t *testing.T) {
 	type payload struct {
 		Findings []struct {

@@ -15,9 +15,8 @@ import (
 	"vetix/internal/plugin"
 )
 
-// maxModelCalls 对应 Python 的 ModelCallLimitMiddleware(run_limit=50)。
-// 注意 Python 的提示词里写的是"50 tool calls"，而代码限制的是模型调用次数，
-// 两者本来就不一致；这里按代码的语义实现。
+// maxModelCalls 是每轮的模型调用上限。注意提示词里写的是"50 tool calls"，
+// 而这里限制的是模型调用次数，两者本来就不一致；按代码的语义实现。
 const maxModelCalls = 50
 
 // VerifyFindings 复核插件命中：无需复核的直接进入结果，其余交给 lite 角色判定。
@@ -57,7 +56,7 @@ func VerifyFindings(ctx context.Context, s *State, f *llm.Factory) error {
 		Instruction:    instruction + fmt.Sprintf(llm.SubmitInstruction, llm.SubmitVerifyTool),
 		Tools:          []tool.BaseTool{submit},
 		ReturnDirectly: []string{llm.SubmitVerifyTool},
-		// 与 Python 版一致：复核阶段只保留 read_file。
+		// 复核阶段只保留 read_file。
 		HiddenTools: []string{"edit_file", "write_file", "grep", "glob", "ls"},
 		BackendRoot: s.Workspace,
 		Allow:       []string{"/" + s.SkillName},
@@ -143,7 +142,7 @@ func behavioralAgent(ctx context.Context, s *State, f *llm.Factory) ([]*Behavior
 		Instruction:    instruction + fmt.Sprintf(llm.SubmitInstruction, llm.SubmitBehavTool),
 		Tools:          []tool.BaseTool{submit},
 		ReturnDirectly: []string{llm.SubmitBehavTool},
-		// 与 Python 版一致：保留 grep 与 read_file，禁掉写类与列目录类工具。
+		// 保留 grep 与 read_file，禁掉写类与列目录类工具。
 		HiddenTools: []string{"edit_file", "write_file", "ls", "glob"},
 		BackendRoot: s.Workspace,
 		Allow: []string{
@@ -168,8 +167,8 @@ func behavioralAgent(ctx context.Context, s *State, f *llm.Factory) ([]*Behavior
 	return findings, nil
 }
 
-// isSoftStop 把"模型调用耗尽"当成提前结束：Python 的 ModelCallLimitMiddleware
-// 默认软终止（补一条最终消息，仍尝试解析），而 eino 抛错会让整轮结果作废。
+// isSoftStop 把"模型调用耗尽"当成提前结束：eino 抛错会让整轮结果作废，但耗尽
+// 之前已经提交的结果仍然有效，所以这里继续走解析而不是整体失败。
 func isSoftStop(err error) bool {
 	return errors.Is(err, adk.ErrExceedMaxIterations) || errors.Is(err, adk.ErrExceedMaxRetries)
 }

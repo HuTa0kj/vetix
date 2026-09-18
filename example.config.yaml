@@ -13,7 +13,7 @@ models:
     # 缺省按角色取值：pro 开启、lite 关闭。
     thinking: true
     # response_format 只在无工具的快速路径（单文件 SKILL）上生效。
-    #   tool        —— 走强制工具调用，等价于 LangChain 的 ToolStrategy（默认）
+    #   tool        —— 走强制工具调用拿结构化输出（默认）
     #   json_schema —— 网关支持 response_format 的 json_schema 时启用
     response_format: tool
 
@@ -32,7 +32,7 @@ roles:
   lite: deepseek-v4-flash
   pro: deepseek-v4-pro
 
-# 可选。注意 eino 的 span 结构与 LangChain 不同，历史追踪记录无法互相对照。
+# 可选：LangSmith 追踪。注意 eino 的 span 结构与 LangChain 不同。
 langsmith:
   tracing: false
   endpoint: "https://api.smith.langchain.com"

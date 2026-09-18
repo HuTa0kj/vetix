@@ -6,7 +6,7 @@ FROM golang:1.25-bookworm AS build
 
 WORKDIR /src
 
-# eino 与 eino-ext 是独立模块，默认走 goproxy.cn；换环境时用 --build-arg 覆盖。
+# 默认走 goproxy.cn 加速依赖拉取；其他网络环境用 --build-arg GOPROXY=... 覆盖。
 ARG GOPROXY=https://goproxy.cn,direct
 ARG GOSUMDB=off
 ENV GOPROXY=${GOPROXY} GOSUMDB=${GOSUMDB} CGO_ENABLED=0

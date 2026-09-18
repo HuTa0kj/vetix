@@ -2,7 +2,7 @@ package runner
 
 import "vetix/internal/buildinfo"
 
-// 转发到 buildinfo，保持 cmd/runner 层的引用风格与 GoTStarter 一致。
+// 转发到 buildinfo，让 runner 内部与调用方都能直接引用 runner.Version 这一组常量。
 const (
 	Version  = buildinfo.Version
 	ToolName = buildinfo.ToolName

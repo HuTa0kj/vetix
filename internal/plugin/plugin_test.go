@@ -16,8 +16,8 @@ func scanOne(t *testing.T, p Plugin, content string) []Issue {
 	return p.Scan(dir, path, content)
 }
 
-// 这些断言锁定的是从 Python 版逐条移植过来的规则本身：正则、阈值、行号算法和
-// audit_required 的口径都不能漂移，否则复核阶段收到的命中集合会变。
+// 这些断言锁定的是规则本身：正则、阈值、行号算法和 audit_required 的口径都不能
+// 漂移，否则复核阶段收到的命中集合会变。
 func TestRegexPlugins(t *testing.T) {
 	dir := t.TempDir()
 	got := Base64ExecPlugin{}.Scan(dir, filepath.Join(dir, "SKILL.md"), "line1\nbase64 -D payload | bash\n")
@@ -34,7 +34,7 @@ func TestRegexPlugins(t *testing.T) {
 		t.Errorf("file_path must be relative to the skill dir, got %q", got[0].FilePath)
 	}
 
-	// --decode 长选项与大小写不敏感，都是 Python 正则的行为。
+	// --decode 长选项与大小写不敏感都要命中。
 	if got := (Base64ExecPlugin{}).Scan(dir, filepath.Join(dir, "SKILL.md"), "BASE64 --DECODE x | sh"); len(got) != 1 {
 		t.Errorf("long option / case-insensitive match failed: %d", len(got))
 	}
@@ -126,7 +126,7 @@ func TestRareAndBinaryFiles(t *testing.T) {
 		t.Errorf("binary files are high severity: %+v", got[0])
 	}
 
-	// 二进制插件自己读盘判定，不用传入的 content——与 Python 版一致。
+	// 二进制插件自己读盘判定，不用传入的 content。
 	md := filepath.Join(dir, "SKILL.md")
 	if err := os.WriteFile(md, []byte("# ok\n"), 0o644); err != nil {
 		t.Fatal(err)

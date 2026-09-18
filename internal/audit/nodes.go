@@ -52,8 +52,8 @@ func GatherBaseInfo(s *State) error {
 	return nil
 }
 
-// skillName 复刻 Python 的 _get_skill_name：取第一个含 SKILL.md 的目录的
-// basename。os.walk 是自顶向下的，所以正常情况下就是最外层目录。
+// skillName 取第一个含 SKILL.md 的目录的 basename。遍历是自顶向下的，
+// 所以正常情况下就是最外层目录。
 func skillName(dir string) (string, error) {
 	found := ""
 	err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
@@ -77,9 +77,9 @@ func skillName(dir string) (string, error) {
 	return found, nil
 }
 
-// isSingleSkillFile 用 os.listdir 的等价语义：目录下只有 SKILL.md 一个条目。
-// 注意隐藏文件也计入，所以 SKILL.md + .DS_Store 会被判为多文件目录——
-// 这与 Python 版一致，不"顺手修掉"，否则单文件快速路径的触发条件会变。
+// isSingleSkillFile 判定目录下是否只有 SKILL.md 一个条目。注意隐藏文件也计入，
+// 所以 SKILL.md + .DS_Store 会被判为多文件目录——这条边界别"顺手修掉"，
+// 否则单文件快速路径的触发条件会变。
 func isSingleSkillFile(dir string) bool {
 	entries, err := os.ReadDir(dir)
 	if err != nil {

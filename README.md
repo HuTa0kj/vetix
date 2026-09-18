@@ -42,7 +42,7 @@ Traditional rule-based scanners rely on predefined patterns and signatures, whic
 
 ### Build
 
-Requires Go 1.25+. The module proxy must be reachable; in this environment `proxy.golang.org` is blocked, so the repo assumes `goproxy.cn`:
+Requires Go 1.25+:
 
 ```bash
 git clone git@github.com:HuTa0kj/vetix.git
@@ -50,7 +50,7 @@ cd vetix
 go build -o vetix ./cmd/vetix
 ```
 
-Prompts and the helper skill are embedded into the binary, so the executable is self-contained. Cross-compile all four targets with `./build.sh`.
+Prompts and the helper skill are embedded into the binary, so the executable is self-contained. `./build.sh` produces release binaries for macOS, Linux, and Windows.
 
 Copy the example config and fill in your model credentials:
 
@@ -99,9 +99,9 @@ langsmith:
 | `models[].response_format` | `tool` (default) forces a named tool call for structured output; `json_schema` uses the gateway's native `response_format`. |
 | `roles.lite` | Fast model, for plugin-hit verification. |
 | `roles.pro` | Reasoning model, for behavioral analysis. |
-| `langsmith` | LangSmith tracing config (optional). Note that eino's span shape differs from LangChain's, so traces are not comparable with the Python-era records. |
+| `langsmith` | LangSmith tracing config (optional). Note that eino emits a different span shape than LangChain, so the traces look different in the LangSmith UI. |
 
-Common commands
+### Common commands
 
 ```bash
 # Scan a SKILL directory

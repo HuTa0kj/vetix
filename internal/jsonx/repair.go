@@ -1,4 +1,4 @@
-// Package jsonx 提供容错 JSON 解析，对应 Python 版的 json_repair 兜底。
+// Package jsonx 提供容错 JSON 解析兜底。
 //
 // 弱模型经工具调用返回结构化结果时经常给出畸形 JSON：包在 ``` 围栏里、带前后
 // 说明文字、尾随逗号、未闭合的括号。这里逐级放宽，尽量把内容捞回来。

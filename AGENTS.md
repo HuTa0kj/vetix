@@ -18,11 +18,11 @@ vetix/
     plugin/             Deterministic scanners + registry
     pluginutils/        Directory hash, tree with line counts, text/binary classification
     sandbox/            Read-only allow-listed filesystem.Backend for the agents
-    pytext/             Python repr helpers (prompt text must match the original exactly)
+    pytext/             Python-style text for prompt rendering (must match the tuned shape exactly)
     jsonx/              Lenient JSON parsing for malformed structured output
     report/             Terminal rendering + report.json
     assets/             Embedded prompts and the helper skill
-  testdata/             SKILL fixtures used to compare against the reference implementation
+  testdata/             SKILL fixtures for plugin and pipeline tests
 ```
 
 ## Workflow
@@ -65,7 +65,7 @@ Per-model `thinking` toggles reasoning (defaults to on for `pro`, off for `lite`
 - **Read-only by construction** — the sandbox backend refuses every write, serves only allow-listed paths, and refuses symlinks anywhere in the path. Mutating tools are hidden from the model as a second layer.
 - **The backend is the boundary, not the model's tool list** — eino's `ToolInfos` filtering only affects visibility; a hallucinated call to a hidden tool still dispatches. Enforcement lives in `internal/sandbox`.
 - **Structured output with a repair net** — agents submit findings through a forced named tool; malformed arguments fall back to `internal/jsonx` so the pipeline still produces usable findings.
-- **Prompt-visible text is load-bearing** — the tree representation and hit list are rendered the way the reference implementation did, because the prompts were tuned against that exact text. `internal/pytext` exists for this reason.
+- **Prompt-visible text is load-bearing** — the tree representation and hit list keep their tuned shape, because the prompts were optimized against that exact text. `internal/pytext` exists for this reason.
 
 ## Guidelines
 

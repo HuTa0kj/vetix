@@ -147,11 +147,11 @@ type AgentOptions struct {
 	Allow []string
 	// SkillFS 提供 /skills/** 下的内嵌 helper skill。
 	SkillFS fs.FS
-	// MaxIters 是模型调用上限，对应 Python 的 ModelCallLimitMiddleware(run_limit)。
+	// MaxIters 是模型调用上限。
 	MaxIters int
 }
 
-// NewAgent 构造带只读沙箱的 deep agent，等价 Python 的 create_deep_agent。
+// NewAgent 构造带只读沙箱的 deep agent。
 func (f *Factory) NewAgent(ctx context.Context, role string, o AgentOptions) (adk.ResumableAgent, *config.Model, error) {
 	cm, m, err := f.Role(ctx, role)
 	if err != nil {
@@ -177,8 +177,8 @@ func (f *Factory) NewAgent(ctx context.Context, role string, o AgentOptions) (ad
 	if len(o.HiddenTools) > 0 {
 		cfg.Handlers = append(cfg.Handlers, hideTools(o.HiddenTools))
 	}
-	// 模型重试只覆盖模型调用；Python 的 ToolRetryMiddleware 重试的是工具调用，
-	// 而这里的工具都是本地只读文件操作，重试价值低，不额外实现。
+	// 重试只覆盖模型调用。工具都是本地只读文件操作，失败多是模型自己就能纠正的
+	// 参数错误，重试价值低，不额外实现。
 	cfg.ModelRetryConfig = &adk.ModelRetryConfig{MaxRetries: 3}
 
 	agent, err := deep.New(ctx, cfg)

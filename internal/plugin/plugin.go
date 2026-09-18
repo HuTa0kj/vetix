@@ -18,7 +18,8 @@ const (
 	SeverityCritical Severity = "critical"
 )
 
-// RiskCategory 是报告里 category 字段的取值域，10 类，逐字对齐 Python 版。
+// RiskCategory 是报告里 category 字段的取值域，10 类。取值即报告中的字面文本，
+// 改动会让历史报告无法对照。
 const (
 	CatRemoteExecution     = "Remote Execution"
 	CatDataExfiltration    = "Data Exfiltration"
@@ -49,7 +50,7 @@ type Plugin interface {
 }
 
 // registry 保存所有插件。Go 插件必须编译进二进制，所以新增插件 = 在本包加文件
-// 并在 init 中 Register，不能用 Python 版那种目录扫描式自动发现。
+// 并在 init 中 Register，没有目录扫描式的自动发现。
 var registry []named
 
 type named struct {
@@ -83,8 +84,7 @@ func relativePath(filePath, skillDir string) string {
 // ScanDirectory 递归遍历 skillDir，对每个文件跑所有插件。
 // 返回值以绝对路径为键，只包含至少有一个命中的文件。
 //
-// 插件/文件级别的 panic 被隔离并转成一条警告，与 Python 版"单个插件崩掉不影响
-// 整体扫描"的 fail-open 行为一致。
+// 插件/文件级别的 panic 被隔离并转成一条警告：单个插件崩掉不影响整体扫描。
 func ScanDirectory(skillDir string) (map[string][]Issue, error) {
 	results := map[string][]Issue{}
 	absSkill, err := filepath.Abs(skillDir)

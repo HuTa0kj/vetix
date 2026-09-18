@@ -34,8 +34,8 @@ func RunAgent(ctx context.Context, agent adk.ResumableAgent, prompt string) (*sc
 	return last, nil
 }
 
-// ParseVerifyFindings 解析复核结果。解析不出来时返回 nil：Python 版在结构化输出
-// 拿不到时会退回"只保留无需复核的命中"，这里保持同样的降级而不是报错。
+// ParseVerifyFindings 解析复核结果。解析不出来时返回 nil：结构化输出拿不到时
+// 降级成"只保留无需复核的命中"，而不是整轮报错。
 func ParseVerifyFindings(raw string) []RiskFinding {
 	if raw == "" {
 		return nil

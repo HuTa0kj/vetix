@@ -1,7 +1,7 @@
 package plugin
 
-// 插件注册表。Python 版按文件名排序扫描 vetix/plugins/*.py 自动发现，Go 必须
-// 编译进二进制，所以这里显式登记；顺序与 Python 的 sorted(glob) 保持一致。
+// 插件注册表。Go 二进制没有运行时发现机制，插件必须显式登记；顺序即插件执行
+// 顺序，保持按名字排序。
 func init() {
 	Register("base64_exec", Base64ExecPlugin{})
 	Register("binary_file", BinaryFileCheckPlugin{})

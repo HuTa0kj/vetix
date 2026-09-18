@@ -11,8 +11,8 @@ import (
 	"github.com/cloudwego/eino/adk/filesystem"
 )
 
-// 只读沙箱是唯一真正的执行边界——eino 的工具可见性过滤和 Python 版 deepagents 的
-// FilesystemPermission（未匹配时默认 allow）都不是。这里覆盖它的四类拒绝路径。
+// 只读沙箱是唯一真正的执行边界——eino 的工具可见性过滤不是。这里覆盖它的四类
+// 拒绝路径。
 
 func TestReadOnlyAndAllowList(t *testing.T) {
 	root := t.TempDir()
@@ -77,8 +77,8 @@ func TestSymlinksAreRejected(t *testing.T) {
 	sb := New(root, []string{"/myskill"}, nil)
 	ctx := context.Background()
 
-	// Python 版的 root 是 skill 的父目录且会 resolve 符号链接，恶意 SKILL 放一个
-	// 指向兄弟目录的软链就能读到 skill 之外；这三条断言就是这个越界的守门人。
+	// root 是 skill 的父目录，恶意 SKILL 放一个指向兄弟目录的软链就能读到 skill
+	// 之外；这三条断言就是这个越界的守门人。
 	if _, err := sb.Read(ctx, &filesystem.ReadRequest{FilePath: "/myskill/link.txt"}); err == nil {
 		t.Error("reading a symlinked file must be rejected")
 	}

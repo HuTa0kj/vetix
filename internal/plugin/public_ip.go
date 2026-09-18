@@ -8,8 +8,8 @@ import (
 
 var ipPattern = regexp.MustCompile(`\b(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b`)
 
-// IsPublicIP 复刻 Python 版的手写判断：只支持 IPv4 点分四段；未过滤
-// 100.64/10、198.18/15、203.0.113/24，要与非公开地址的既有判定保持一致。
+// IsPublicIP 只支持 IPv4 点分四段。刻意不过滤 100.64/10、198.18/15、
+// 203.0.113/24 这类特殊用途网段：判定口径改动会连带改变插件命中集合。
 func IsPublicIP(ip string) bool {
 	parts := strings.Split(ip, ".")
 	if len(parts) != 4 {
@@ -73,8 +73,7 @@ func (PublicIPCheckPlugin) Scan(skillDir, filePath, content string) []Issue {
 	if len(publics) == 0 {
 		return nil
 	}
-	// Python 版把 set 直接插进 f-string，元素顺序由字符串哈希随机化决定，
-	// 每次运行都可能不同。这里固定为首次出现顺序，消除这项非确定性。
+	// 固定为首次出现顺序：集合的哈希序每次运行都不同，会让这段描述文本漂移。
 	return []Issue{{
 		Name:     "Discover public IP address",
 		Severity: SeverityMedium,
@@ -87,7 +86,7 @@ func (PublicIPCheckPlugin) Scan(skillDir, filePath, content string) []Issue {
 	}}
 }
 
-// pySet 渲染成 Python 风格的集合字面量，保持提示词里看到的文本形态。
+// pySet 渲染成集合字面量，保持提示词里看到的文本形态。
 func pySet(items []string) string {
 	var sb strings.Builder
 	sb.WriteString("{")

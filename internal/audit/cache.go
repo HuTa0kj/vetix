@@ -23,7 +23,7 @@ type cachedReport struct {
 }
 
 // LoadCachedReport 按 <output-dir>/<hash[:16]>/report.json 找已有报告。
-// 与 Python 版一致：任何异常都退化成"没有缓存"，由调用方重新扫描。
+// 任何异常都退化成"没有缓存"，由调用方重新扫描。
 func LoadCachedReport(skillDir, outputDir string) (*State, error) {
 	hash, err := pluginutils.DirectoryHash(skillDir)
 	if err != nil {

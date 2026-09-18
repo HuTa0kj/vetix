@@ -19,8 +19,8 @@ func newTaskID() string {
 	return hex.EncodeToString(b)
 }
 
-// registerTracing 按配置挂上 LangSmith 回调。注意 eino 的 span 结构与 LangChain
-// 完全不同，历史追踪记录无法互相对照。
+// registerTracing 按配置挂上 LangSmith 回调。eino 的 span 结构与 LangChain 不同，
+// 追踪记录在 LangSmith 界面上的呈现形态也与之有别。
 func registerTracing(cfg *config.Config) {
 	ls := cfg.LangSmith
 	if ls == nil || ls.APIKey == "" {

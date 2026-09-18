@@ -6,7 +6,7 @@ import (
 )
 
 // Finding 是最终报告里的一条发现。plugin 与 behavioral 两个来源共用此结构，
-// 与 Python 版 report.json 的 findings 条目逐字段对齐。
+// 字段即 report.json 的 findings 条目的键名。
 type Finding struct {
 	Source      string `json:"source"`
 	Name        string `json:"name"`
@@ -59,7 +59,7 @@ func (s *State) FileNumber() int {
 	return s.Stats.Files
 }
 
-// Findings 按 plugin → behavioral 的顺序拼接，与 Python 版 render/write 一致。
+// Findings 按 plugin → behavioral 的顺序拼接，即报告中的排列顺序。
 func (s *State) Findings() []Finding {
 	out := make([]Finding, 0, len(s.PluginsVerifyFindings)+len(s.LLMFindings))
 	for _, f := range s.PluginsVerifyFindings {

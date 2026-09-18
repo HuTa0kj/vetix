@@ -65,8 +65,7 @@ func (r *Runner) Run() error {
 		gologger.Info().Msgf("Output base directory: %s", outputDir)
 	}
 
-	// 缓存查找不受 -no-output 影响：只要上次连同报告一起落过盘，这次就直接渲染，
-	// 与参考实现的行为一致。
+	// 缓存查找不受 -no-output 影响：只要上次连同报告一起落过盘，这次就直接渲染。
 	if !r.Options.Force {
 		cached, err := audit.LoadCachedReport(source, outputDir)
 		if err != nil {
