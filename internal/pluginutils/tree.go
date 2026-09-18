@@ -3,13 +3,14 @@ package pluginutils
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"unicode/utf8"
+
+	"vetix/internal/pytext"
 )
 
 // DirectoryHash 是内容寻址的缓存键：每个文件贡献 "相对路径:文件内容 sha256"，
@@ -190,36 +191,8 @@ func TreeStats(tree map[string]any) (topLevel, files, dirs int) {
 
 // TreeRepr 按 Python 字面量风格渲染目录树，因为提示词里的"目录结构"就是这段
 // 文本。map 的遍历顺序在 Go 里是随机的，这里按键排序以保证同一输入文本稳定。
+// 渲染委托给 pytext：文件名含引号等特殊字符时能得到正确的转义，而不是拼出
+// 破损的字面量。
 func TreeRepr(tree map[string]any) string {
-	var sb strings.Builder
-	writePy(&sb, tree)
-	return sb.String()
-}
-
-func writePy(sb *strings.Builder, tree map[string]any) {
-	sb.WriteString("{")
-	keys := make([]string, 0, len(tree))
-	for k := range tree {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for i, k := range keys {
-		if i > 0 {
-			sb.WriteString(", ")
-		}
-		sb.WriteString("'")
-		sb.WriteString(k)
-		sb.WriteString("': ")
-		switch v := tree[k].(type) {
-		case map[string]any:
-			writePy(sb, v)
-		case int:
-			sb.WriteString(fmt.Sprintf("%d", v))
-		case nil:
-			sb.WriteString("None")
-		default:
-			sb.WriteString(fmt.Sprintf("%v", v))
-		}
-	}
-	sb.WriteString("}")
+	return pytext.Value(tree)
 }
