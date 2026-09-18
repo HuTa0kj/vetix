@@ -13,43 +13,52 @@ import (
 
 // GatherBaseInfo 收集 SKILL 的基本信息：名称、目录树（含每个文件的行数）、
 // 内容哈希，并判定是否只有一个 SKILL.md。
-func GatherBaseInfo(s *State) error {
-	name, err := skillName(s.SkillDir)
+func GatherBaseInfo(h *stateHandle) error {
+	snap, err := h.snapshot()
 	if err != nil {
 		return err
 	}
-	s.SkillName = name
+	dir := snap.SkillDir
+
+	name, err := skillName(dir)
+	if err != nil {
+		return err
+	}
 	gologger.Info().Msgf("Start scan SKILL: %s", name)
 
-	content, err := os.ReadFile(filepath.Join(s.SkillDir, "SKILL.md"))
+	content, err := os.ReadFile(filepath.Join(dir, "SKILL.md"))
 	if err != nil {
 		return fmt.Errorf("read SKILL.md: %w", err)
 	}
-	s.SkillContent = string(content)
 
-	tree, err := pluginutils.Tree(s.SkillDir)
+	tree, err := pluginutils.Tree(dir)
 	if err != nil {
 		return fmt.Errorf("build skill tree: %w", err)
 	}
-	s.Tree = tree
 	top, files, dirs := pluginutils.TreeStats(tree)
-	s.Stats = TreeStats{TopLevel: top, Files: files, Dirs: dirs}
 
-	hash, err := pluginutils.DirectoryHash(s.SkillDir)
+	hash, err := pluginutils.DirectoryHash(dir)
 	if err != nil {
 		return fmt.Errorf("compute directory hash: %w", err)
 	}
-	s.DirectoryHash = hash
 	gologger.Debug().Msgf("SKILL hash: %s, tree stats: top_level=%d files=%d dirs=%d",
 		hash, top, files, dirs)
 
-	s.SingleSkill = isSingleSkillFile(s.SkillDir)
-	if s.SingleSkill {
+	single := isSingleSkillFile(dir)
+	if single {
 		gologger.Info().Msg("Found 1 file in the SKILL directory")
 	} else {
-		gologger.Info().Msgf("Found %d files in the SKILL directory", s.Stats.Files)
+		gologger.Info().Msgf("Found %d files in the SKILL directory", files)
 	}
-	return nil
+
+	return h.with(func(s *State) {
+		s.SkillName = name
+		s.SkillContent = string(content)
+		s.Tree = tree
+		s.Stats = TreeStats{TopLevel: top, Files: files, Dirs: dirs}
+		s.DirectoryHash = hash
+		s.SingleSkill = single
+	})
 }
 
 // skillName 取第一个含 SKILL.md 的目录的 basename。遍历是自顶向下的，
@@ -92,17 +101,22 @@ func isSingleSkillFile(dir string) bool {
 }
 
 // PluginCheck 对所有文件跑插件。插件级异常在 plugin 包内被隔离成警告。
-func PluginCheck(s *State) error {
-	issues, err := plugin.ScanDirectory(s.SkillDir)
+func PluginCheck(h *stateHandle) error {
+	snap, err := h.snapshot()
 	if err != nil {
 		return err
 	}
-	s.PluginsCheckFindings = issues
+
+	issues, err := plugin.ScanDirectory(snap.SkillDir)
+	if err != nil {
+		return err
+	}
 
 	total := 0
 	for _, list := range issues {
 		total += len(list)
 	}
 	gologger.Info().Msgf("Plugin check revealed %d security risks", total)
-	return nil
+
+	return h.with(func(s *State) { s.PluginsCheckFindings = issues })
 }

@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cloudwego/eino-ext/components/model/openai"
@@ -21,7 +22,10 @@ import (
 )
 
 // Factory 按角色构造并缓存模型实例，避免同一次扫描里重复建连接。
+//
+// mu 保护 cache：verify 与 behavioral 两条分支并行，各自按自己的角色取模型。
 type Factory struct {
+	mu    sync.Mutex
 	cfg   *config.Config
 	cache map[string]*openai.ChatModel
 }
@@ -38,6 +42,9 @@ func (f *Factory) Role(ctx context.Context, role string) (*openai.ChatModel, *co
 		return nil, nil, err
 	}
 	m = m.WithThinking(role)
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	if cm, ok := f.cache[role]; ok {
 		return cm, m, nil
 	}

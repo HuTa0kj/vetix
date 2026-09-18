@@ -36,7 +36,6 @@ func (r *Runner) Run() error {
 	if err != nil {
 		return err
 	}
-	registerTracing(cfg)
 
 	source, err := filepath.Abs(r.Options.Source)
 	if err != nil {
@@ -56,6 +55,7 @@ func (r *Runner) Run() error {
 		DetectedAt: time.Now().Format("2006-01-02T15:04:05-07:00"),
 		Language:   r.Options.Language,
 	}
+	// Thread ID 同时是 LangSmith 的根 span id。
 	gologger.Info().Msgf("Thread ID: %s", state.TaskID)
 
 	if state.SaveOutput {
@@ -79,6 +79,9 @@ func (r *Runner) Run() error {
 		}
 	}
 
+	// 缓存命中时 pipeline 不跑，没有 span 可发。
+	traceCtx := registerTracing(cfg, state.TaskID)
+
 	factory := llm.NewFactory(cfg)
 	render := func(s *audit.State) error {
 		report.Render(s)
@@ -97,6 +100,10 @@ func (r *Runner) Run() error {
 		return fmt.Errorf("build workflow: %w", err)
 	}
 	runCtx := audit.WithSeed(ctx, state)
+	if traceCtx != nil {
+		runCtx = traceCtx(runCtx)
+	}
+
 	if _, err := workflow.Invoke(runCtx, map[string]any{}); err != nil {
 		return err
 	}

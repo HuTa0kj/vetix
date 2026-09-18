@@ -1,16 +1,11 @@
 models:
-  # 每个模型是一个 OpenAI 兼容端点。api_key / base_url 必填，其余可选。
-  # base_url 要指向 API 根路径，多数网关需要带 /v1，否则会返回网页而不是 JSON。
   - id: deepseek-v4-pro
     name: DeepSeek-V4-Pro
     api_key: ""
     base_url: "https://xxx.com/v1"
     temperature: 0.7
     extra_body: {}
-    # extra_headers 会附加到每一次请求上（快速路径与 agent 内部调用都生效）。
     extra_headers: {}
-    # thinking 控制是否在请求体里注入 {"thinking": {"type": "enabled"}}。
-    # 缺省按角色取值：pro 开启、lite 关闭。
     thinking: true
     # response_format 只在无工具的快速路径（单文件 SKILL）上生效。
     #   tool        —— 走强制工具调用拿结构化输出（默认）
@@ -28,11 +23,10 @@ models:
     response_format: tool
 
 roles:
-  # lite：插件命中复核。pro：行为分析。
   lite: deepseek-v4-flash
   pro: deepseek-v4-pro
 
-# 可选：LangSmith 追踪。注意 eino 的 span 结构与 LangChain 不同。
+# 可选
 langsmith:
   tracing: false
   endpoint: "https://api.smith.langchain.com"

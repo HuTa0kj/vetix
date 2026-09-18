@@ -99,7 +99,7 @@ langsmith:
 | `models[].response_format` | `tool`（默认）用强制具名工具调用来拿结构化输出；`json_schema` 使用网关原生的 `response_format`。 |
 | `roles.lite` | 轻量模型，用于插件命中复核。 |
 | `roles.pro` | 推理模型，用于行为分析。 |
-| `langsmith` | LangSmith 追踪配置（可选）。注意 eino 的 span 结构与 LangChain 不同，在 LangSmith 界面上看到的形态也与之有别。 |
+| `langsmith` | LangSmith 追踪配置（可选） |
 
 ### 常用命令
 
@@ -168,10 +168,6 @@ func (MyCheckPlugin) Scan(skillDir, filePath, content string) []Issue {
     return nil
 }
 ```
-
-## Agent 追踪
-
-在 `config.yaml` 中配置 [LangSmith](https://smith.langchain.com/) 即可追踪每一次 Agent 运行——模型调用、工具调用与结构化输出都可见。
 
 ## 许可证
 

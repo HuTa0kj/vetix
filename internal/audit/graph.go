@@ -25,41 +25,40 @@ const (
 // （以及显式注册过的类型），report 有两个前驱，用标量类型会在汇聚点直接报
 // "unsupported type"。节点间本来就不靠边传值，全部走共享 state。
 func Workflow(ctx context.Context, f *llm.Factory, report func(*State) error) (compose.Runnable[map[string]any, map[string]any], error) {
-	// 共享 state 一律通过 compose.ProcessState 访问：compose 在调用回调期间持有
-	// per-state 互斥锁，两条并行分支因此是串行安全的。抓指针直接改会绕过这把锁。
 	g := compose.NewGraph[map[string]any, map[string]any](
 		compose.WithGenLocalState(func(ctx context.Context) *State { return stateFrom(ctx) }))
 
-	add := func(key string, fn func(context.Context, *State) error) error {
+	add := func(key string, fn func(context.Context, *stateHandle) error) error {
 		return g.AddLambdaNode(key, compose.InvokableLambda(
 			func(ctx context.Context, _ map[string]any) (map[string]any, error) {
-				var runErr error
-				if err := compose.ProcessState(ctx, func(ctx context.Context, s *State) error {
-					runErr = fn(ctx, s)
-					return nil
-				}); err != nil {
+				if err := fn(ctx, &stateHandle{ctx: ctx}); err != nil {
 					return nil, err
 				}
-				if runErr != nil {
-					return nil, runErr
-				}
 				return map[string]any{key: true}, nil
-			}))
+			}),
+			// 无它 RunInfo.Name 为空，节点在追踪里全叫 "Lambda"。
+			compose.WithNodeName(key))
 	}
 
-	if err := add(nodeGather, func(_ context.Context, s *State) error { return GatherBaseInfo(s) }); err != nil {
+	if err := add(nodeGather, func(_ context.Context, h *stateHandle) error { return GatherBaseInfo(h) }); err != nil {
 		return nil, err
 	}
-	if err := add(nodePlugins, func(_ context.Context, s *State) error { return PluginCheck(s) }); err != nil {
+	if err := add(nodePlugins, func(_ context.Context, h *stateHandle) error { return PluginCheck(h) }); err != nil {
 		return nil, err
 	}
-	if err := add(nodeVerify, func(ctx context.Context, s *State) error { return VerifyFindings(ctx, s, f) }); err != nil {
+	if err := add(nodeVerify, func(ctx context.Context, h *stateHandle) error { return VerifyFindings(ctx, h, f) }); err != nil {
 		return nil, err
 	}
-	if err := add(nodeBehavior, func(ctx context.Context, s *State) error { return BehavioralAnalysis(ctx, s, f) }); err != nil {
+	if err := add(nodeBehavior, func(ctx context.Context, h *stateHandle) error { return BehavioralAnalysis(ctx, h, f) }); err != nil {
 		return nil, err
 	}
-	if err := add(nodeReport, func(_ context.Context, s *State) error { return report(s) }); err != nil {
+	if err := add(nodeReport, func(_ context.Context, h *stateHandle) error {
+		var runErr error
+		if err := h.with(func(s *State) { runErr = report(s) }); err != nil {
+			return err
+		}
+		return runErr
+	}); err != nil {
 		return nil, err
 	}
 
@@ -82,6 +81,24 @@ func Workflow(ctx context.Context, f *llm.Factory, report func(*State) error) (c
 	return g.Compile(ctx,
 		compose.WithGraphName("skill_safe_audit"),
 		compose.WithNodeTriggerMode(compose.AllPredecessor))
+}
+
+// stateHandle 是节点函数访问共享 state 的入口，每次 with 取一次锁、绝不长持。
+// compose.ProcessState 持锁到 handler 返回，而 verify 与 behavioral 是并行的，
+// 在锁内跑 agent 会让先抢到锁的一条独占几十秒，另一条从节点启动起就干等。
+type stateHandle struct{ ctx context.Context }
+
+func (h *stateHandle) with(fn func(*State)) error {
+	return compose.ProcessState(h.ctx, func(_ context.Context, s *State) error {
+		fn(s)
+		return nil
+	})
+}
+
+func (h *stateHandle) snapshot() (snapshot, error) {
+	var out snapshot
+	err := h.with(func(s *State) { out = s.snapshot() })
+	return out, err
 }
 
 type seedKey struct{}

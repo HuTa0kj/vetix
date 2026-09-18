@@ -99,7 +99,7 @@ langsmith:
 | `models[].response_format` | `tool` (default) forces a named tool call for structured output; `json_schema` uses the gateway's native `response_format`. |
 | `roles.lite` | Fast model, for plugin-hit verification. |
 | `roles.pro` | Reasoning model, for behavioral analysis. |
-| `langsmith` | LangSmith tracing config (optional). Note that eino emits a different span shape than LangChain, so the traces look different in the LangSmith UI. |
+| `langsmith` | LangSmith tracing config (optional) |
 
 ### Common commands
 
@@ -168,10 +168,6 @@ func (MyCheckPlugin) Scan(skillDir, filePath, content string) []Issue {
     return nil
 }
 ```
-
-## Agent Tracing
-
-Configure [LangSmith](https://smith.langchain.com/) in `config.yaml` to trace every agent run — model calls, tool invocations, and structured outputs are all visible.
 
 ## License
 

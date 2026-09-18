@@ -52,7 +52,44 @@ type State struct {
 	Err string
 }
 
+// snapshot 是节点在锁外工作用的只读副本。Tree 与 PluginsCheckFindings 按引用共享：
+// 它们写回后再无人改动，只读传出是安全的。
+type snapshot struct {
+	SkillDir     string
+	SkillName    string
+	Workspace    string
+	Language     string
+	SkillContent string
+	Tree         map[string]any
+	SingleSkill  bool
+	Stats        TreeStats
+
+	PluginsCheckFindings map[string][]plugin.Issue
+}
+
+func (s *State) snapshot() snapshot {
+	return snapshot{
+		SkillDir:     s.SkillDir,
+		SkillName:    s.SkillName,
+		Workspace:    s.Workspace,
+		Language:     s.Language,
+		SkillContent: s.SkillContent,
+		Tree:         s.Tree,
+		SingleSkill:  s.SingleSkill,
+		Stats:        s.Stats,
+
+		PluginsCheckFindings: s.PluginsCheckFindings,
+	}
+}
+
 func (s *State) FileNumber() int {
+	if s.SingleSkill {
+		return 1
+	}
+	return s.Stats.Files
+}
+
+func (s snapshot) FileNumber() int {
 	if s.SingleSkill {
 		return 1
 	}

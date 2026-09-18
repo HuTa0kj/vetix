@@ -20,10 +20,15 @@ import (
 const maxModelCalls = 50
 
 // VerifyFindings 复核插件命中：无需复核的直接进入结果，其余交给 lite 角色判定。
-func VerifyFindings(ctx context.Context, s *State, f *llm.Factory) error {
+func VerifyFindings(ctx context.Context, h *stateHandle, f *llm.Factory) error {
+	snap, err := h.snapshot()
+	if err != nil {
+		return err
+	}
+
 	var direct []RiskFinding
 	var needVerify []plugin.Issue
-	for _, issues := range s.PluginsCheckFindings {
+	for _, issues := range snap.PluginsCheckFindings {
 		for _, i := range issues {
 			if i.AuditRequired {
 				needVerify = append(needVerify, i)
@@ -37,8 +42,7 @@ func VerifyFindings(ctx context.Context, s *State, f *llm.Factory) error {
 	}
 	if len(needVerify) == 0 {
 		gologger.Info().Msgf("Plugin has been found to have %d security risks", len(direct))
-		s.PluginsVerifyFindings = direct
-		return nil
+		return h.with(func(s *State) { s.PluginsVerifyFindings = direct })
 	}
 	gologger.Info().Msgf("Cross-validate the %d rules discovered by the plugin", len(needVerify))
 
@@ -58,46 +62,46 @@ func VerifyFindings(ctx context.Context, s *State, f *llm.Factory) error {
 		ReturnDirectly: []string{llm.SubmitVerifyTool},
 		// 复核阶段只保留 read_file。
 		HiddenTools: []string{"edit_file", "write_file", "grep", "glob", "ls"},
-		BackendRoot: s.Workspace,
-		Allow:       []string{"/" + s.SkillName},
+		BackendRoot: snap.Workspace,
+		Allow:       []string{"/" + snap.SkillName},
 		MaxIters:    maxModelCalls,
 	})
 	if err != nil {
 		return err
 	}
 
-	if _, runErr := RunAgent(ctx, agent, VerifyPrompt(s, needVerify)); runErr != nil && !isSoftStop(runErr) {
+	if _, runErr := RunAgent(ctx, agent, VerifyPrompt(snap, needVerify)); runErr != nil && !isSoftStop(runErr) {
 		return runErr
 	}
 	verified := ParseVerifyFindings(collector.Raw())
 	if len(verified) == 0 {
 		// 复核结果没拿到：既可能是模型真的没确认任何命中，也可能是结构化输出没解析
 		// 出来。后者会让命中静默消失，必须留下痕迹。
-		gologger.Warning().Msgf("No structured verification result for %s; keeping only non-audited hits", s.SkillName)
+		gologger.Warning().Msgf("No structured verification result for %s; keeping only non-audited hits", snap.SkillName)
 	}
-	s.PluginsVerifyFindings = append(direct, verified...)
-	return nil
+	return h.with(func(s *State) { s.PluginsVerifyFindings = append(direct, verified...) })
 }
 
 // BehavioralAnalysis：单文件走无工具的快速路径，多文件走带沙箱的 agent。
-func BehavioralAnalysis(ctx context.Context, s *State, f *llm.Factory) error {
-	if s.SingleSkill {
-		findings, err := singleFileAnalysis(ctx, s, f)
-		if err != nil {
-			return err
-		}
-		s.LLMFindings = findings
-		return nil
-	}
-	findings, err := behavioralAgent(ctx, s, f)
+func BehavioralAnalysis(ctx context.Context, h *stateHandle, f *llm.Factory) error {
+	snap, err := h.snapshot()
 	if err != nil {
 		return err
 	}
-	s.LLMFindings = findings
-	return nil
+
+	var findings []*BehavioralRiskItem
+	if snap.SingleSkill {
+		findings, err = singleFileAnalysis(ctx, snap, f)
+	} else {
+		findings, err = behavioralAgent(ctx, snap, f)
+	}
+	if err != nil {
+		return err
+	}
+	return h.with(func(s *State) { s.LLMFindings = findings })
 }
 
-func singleFileAnalysis(ctx context.Context, s *State, f *llm.Factory) ([]*BehavioralRiskItem, error) {
+func singleFileAnalysis(ctx context.Context, s snapshot, f *llm.Factory) ([]*BehavioralRiskItem, error) {
 	if s.SkillContent == "" {
 		gologger.Warning().Msg("single_file_analysis: SKILL.md content is empty, skip")
 		return nil, nil
@@ -126,7 +130,7 @@ func singleFileAnalysis(ctx context.Context, s *State, f *llm.Factory) ([]*Behav
 	return findings, nil
 }
 
-func behavioralAgent(ctx context.Context, s *State, f *llm.Factory) ([]*BehavioralRiskItem, error) {
+func behavioralAgent(ctx context.Context, s snapshot, f *llm.Factory) ([]*BehavioralRiskItem, error) {
 	gologger.Info().Msgf("behavioral_analysis: start, skill_dir=%s", s.SkillDir)
 	instruction, err := assets.Prompt("behavioral_analysis_system.md")
 	if err != nil {

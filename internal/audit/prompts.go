@@ -17,7 +17,7 @@ func OutputLanguage(lang string) string {
 
 // VerifyPrompt 构造复核提示词。命中列表用 dataclass 风格的 repr 文本，路径前
 // 硬编码一个 "/" 前缀——提示词是在这套文本上调优的，形态不能改。
-func VerifyPrompt(s *State, hits []plugin.Issue) string {
+func VerifyPrompt(s snapshot, hits []plugin.Issue) string {
 	return "Please verify each of the following rules to determine if they represent a genuine risk." +
 		"The system combines contextual judgment with the output of the verification results for each hit, based on the schema.\n\n" +
 		fmt.Sprintf("SKILL absolute path: /%s\n\n", s.SkillName) +
@@ -27,7 +27,7 @@ func VerifyPrompt(s *State, hits []plugin.Issue) string {
 }
 
 // BehavioralPrompt 构造多文件行为分析的提示词。
-func BehavioralPrompt(s *State) string {
+func BehavioralPrompt(s snapshot) string {
 	// 路径前额外拼一个 "/"：用户传绝对路径时文本会形如 //Users/...。这段畸形
 	// 拼接是提示词调优时的形态，保持原样。
 	return "Please perform a behavioral security analysis on the following SKILL categories to identify security risks that the rules cannot recognize.\n\n" +
@@ -39,7 +39,7 @@ func BehavioralPrompt(s *State) string {
 }
 
 // SingleFilePrompt 构造单文件快速路径的提示词，SKILL.md 全文内联。
-func SingleFilePrompt(s *State) string {
+func SingleFilePrompt(s snapshot) string {
 	return "Please perform a behavioral security analysis on the complete content of SKILL.md below to identify security risks that the rules cannot recognize.\n\n" +
 		fmt.Sprintf("SKILL directory path:/%s\n\n", s.SkillDir) +
 		fmt.Sprintf("The directory structure is as follows:%s\n\n", TreeRepr(s)) +
@@ -50,6 +50,6 @@ func SingleFilePrompt(s *State) string {
 
 // TreeRepr 渲染成模型看到的"目录结构"文本：单引号、多一层 "." 根、
 // {'line_count': N} 叶子都要保留。
-func TreeRepr(s *State) string {
+func TreeRepr(s snapshot) string {
 	return pytext.Value(s.Tree)
 }
