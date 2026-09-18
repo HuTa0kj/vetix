@@ -174,6 +174,38 @@ func TestReadTruncatesWithNoticeAndOffsetContinues(t *testing.T) {
 	}
 }
 
+// grep 的文件枚举不能复用 ls/glob 的 maxListEntries 封顶：超过封顶数量的文件会被
+// 静默跳过，"搜过了"伪装成"没搜到"。ls/glob 面向模型照常封顶，grep 必须看全。
+func TestGrepSeesPastTheListCap(t *testing.T) {
+	root := t.TempDir()
+	skill := filepath.Join(root, "myskill")
+	must(t, os.MkdirAll(filepath.Join(skill, "zdir"), 0o755))
+	// zdir 按路径排序落在 f* 之后，needle 在 GlobInfo 的封顶线之外。
+	for i := 0; i < maxListEntries+20; i++ {
+		must(t, os.WriteFile(filepath.Join(skill, fmt.Sprintf("f%04d.txt", i)), []byte("plain\n"), 0o644))
+	}
+	must(t, os.WriteFile(filepath.Join(skill, "zdir", "zneedle.txt"), []byte("NEEDLE here\n"), 0o644))
+
+	b := New(root, []string{"/myskill"}, nil)
+	ctx := context.Background()
+
+	gl, err := b.GlobInfo(ctx, &filesystem.GlobInfoRequest{Path: "/myskill", Pattern: "**/*.txt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(gl) != maxListEntries+1 {
+		t.Fatalf("glob must stay capped: got %d entries", len(gl))
+	}
+
+	got, err := b.GrepRaw(ctx, &filesystem.GrepRequest{Pattern: "NEEDLE", Path: "/myskill"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Path != "/myskill/zdir/zneedle.txt" {
+		t.Fatalf("file past the list cap must be searched, got %+v", got)
+	}
+}
+
 // grep 先走封顶的 Read 再搜会在长文件上漏报，这里锁定它读全文。
 func TestGrepSeesPastTheReadCap(t *testing.T) {
 	root := t.TempDir()

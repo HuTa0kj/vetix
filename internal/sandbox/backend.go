@@ -420,12 +420,74 @@ func (b *Backend) globEmbedded(v, ep string, re *regexp.Regexp) ([]filesystem.Fi
 	return out, nil
 }
 
+// listFiles 枚举 base 下所有普通文件，供 GrepRaw 使用。不能复用 GlobInfo：它是
+// 面向模型的工具、有 maxListEntries 封顶，grep 借道它会在大目录上静默丢掉排序靠后
+// 的文件——"搜过了"变成漏报，不是省预算。遍历语义与 GlobInfo 保持一致：跳过软链
+// 与隐藏目录，越出白名单的子树不计入。
+func (b *Backend) listFiles(ctx context.Context, v string) ([]string, error) {
+	if ep, ok := b.embedded(v); ok {
+		var out []string
+		err := fs.WalkDir(b.skillFS, ep, func(p string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return nil
+			}
+			out = append(out, path.Join(v, strings.TrimPrefix(strings.TrimPrefix(p, ep), "/")))
+			return nil
+		})
+		return out, err
+	}
+	full, err := b.resolve(ctx, v)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	err = filepath.WalkDir(full, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.Type()&os.ModeSymlink != 0 {
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if d.IsDir() {
+			if p != full && strings.HasPrefix(d.Name(), ".") {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		rel, err := filepath.Rel(full, p)
+		if err != nil {
+			return nil
+		}
+		child := path.Join(v, filepath.ToSlash(rel))
+		if !b.allowed(child) {
+			return nil
+		}
+		out = append(out, child)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
 func (b *Backend) GrepRaw(ctx context.Context, req *filesystem.GrepRequest) ([]filesystem.GrepMatch, error) {
 	base := req.Path
 	if base == "" {
 		base = "/"
 	}
-	files, err := b.GlobInfo(ctx, &filesystem.GlobInfoRequest{Pattern: "**/*", Path: base})
+	v, err := b.virtual(base)
+	if err != nil {
+		return nil, err
+	}
+	if !b.allowed(v) {
+		return nil, b.notPermitted(req.Path)
+	}
+	files, err := b.listFiles(ctx, v)
 	if err != nil {
 		return nil, err
 	}
@@ -454,19 +516,16 @@ func (b *Backend) GrepRaw(ctx context.Context, req *filesystem.GrepRequest) ([]f
 	fileType := strings.ToLower(strings.TrimPrefix(req.FileType, "."))
 	before, after := req.BeforeLines, req.AfterLines
 	var out []filesystem.GrepMatch
-	for _, f := range files {
-		if f.IsDir {
+	for _, fp := range files {
+		if globRe != nil && !globRe.MatchString(path.Base(fp)) && !globRe.MatchString(fp) {
 			continue
 		}
-		if globRe != nil && !globRe.MatchString(path.Base(f.Path)) && !globRe.MatchString(f.Path) {
-			continue
-		}
-		if fileType != "" && strings.TrimPrefix(path.Ext(f.Path), ".") != fileType {
+		if fileType != "" && strings.TrimPrefix(path.Ext(fp), ".") != fileType {
 			continue
 		}
 		// 走 readAll 而不是 Read：Read 会给长文件封顶，用它搜索会漏掉 1000 行之后
 		// 的全部命中。
-		text, err := b.readAll(ctx, f.Path)
+		text, err := b.readAll(ctx, fp)
 		if err != nil {
 			continue
 		}
@@ -477,7 +536,7 @@ func (b *Backend) GrepRaw(ctx context.Context, req *filesystem.GrepRequest) ([]f
 			}
 			out = append(out, filesystem.GrepMatch{
 				Content: grepLine(line) + grepContext(lines, i, before, after),
-				Path:    f.Path,
+				Path:    fp,
 				Line:    i + 1,
 			})
 		}
