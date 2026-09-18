@@ -36,10 +36,11 @@ func VerifyPrompt(s snapshot, hits []plugin.Issue) string {
 
 // BehavioralPrompt 构造多文件行为分析的提示词。
 func BehavioralPrompt(s snapshot) string {
-	// 路径前额外拼一个 "/"：用户传绝对路径时文本会形如 //Users/...。这段畸形
-	// 拼接是提示词调优时的形态，保持原样。
+	// 路径必须与 behavioralAgent 的 Allow 白名单同源：沙箱里只存在 /<SkillName>
+	// 这棵虚拟树，给宿主绝对路径只会让模型浪费整轮工具调用去试错（VerifyPrompt
+	// 一直用的就是虚拟路径）。"/" 前缀和行文本形态是调优时的形态，保持原样。
 	return "Please perform a behavioral security analysis on the following SKILL categories to identify security risks that the rules cannot recognize.\n\n" +
-		fmt.Sprintf("SKILL directory path: /%s\n\n", s.SkillDir) +
+		fmt.Sprintf("SKILL directory path: /%s\n\n", s.SkillName) +
 		fmt.Sprintf("The directory structure is as follows: %s\n\n", TreeRepr(s)) +
 		fmt.Sprintf("The number of files in the directory is:%d\n\n", s.FileNumber()) +
 		"The analysis begins with SKILL.md in the target directory.\n\n" +
@@ -53,7 +54,9 @@ func BehavioralPrompt(s snapshot) string {
 // SingleFilePrompt 构造单文件快速路径的提示词，SKILL.md 全文内联。
 func SingleFilePrompt(s snapshot) string {
 	return "Please perform a behavioral security analysis on the complete content of SKILL.md below to identify security risks that the rules cannot recognize.\n\n" +
-		fmt.Sprintf("SKILL directory path:/%s\n\n", s.SkillDir) +
+		// 单文件快速路径没有工具，路径只是文本；仍用虚拟路径，避免把宿主绝对路径
+	// 写进提示词。行内无空格是调优形态，保持原样。
+	fmt.Sprintf("SKILL directory path:/%s\n\n", s.SkillName) +
 		fmt.Sprintf("The directory structure is as follows:%s\n\n", TreeRepr(s)) +
 		"The following is the full content of SKILL.md:\n\n" +
 		fmt.Sprintf("```markdown\n%s\n```\n\n", s.SkillContent) +

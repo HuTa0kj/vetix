@@ -112,7 +112,7 @@ func (b *Backend) resolve(ctx context.Context, p string) (string, error) {
 		return "", err
 	}
 	if !b.allowed(v) {
-		return "", fmt.Errorf("path not permitted: %q", p)
+		return "", b.notPermitted(p)
 	}
 	full := filepath.Join(b.root, filepath.FromSlash(strings.TrimPrefix(v, "/")))
 	if err := b.noSymlink(full); err != nil {
@@ -157,6 +157,13 @@ func (b *Backend) embedded(v string) (string, bool) {
 		return "", false
 	}
 	return "skills" + strings.TrimPrefix(v, skillsPrefix), true
+}
+
+// notPermitted 在错误里带上白名单。提示词给不了模型所有路径知识（helper skill、
+// 虚拟挂载点），盲猜格式要花模型整轮工具调用；列出允许路径让它一次自纠。白名单
+// 是虚拟路径，不含宿主信息。
+func (b *Backend) notPermitted(p string) error {
+	return fmt.Errorf("path not permitted: %q (permitted paths: %s)", p, strings.Join(b.allow, ", "))
 }
 
 func (b *Backend) Read(ctx context.Context, req *filesystem.ReadRequest) (*filesystem.FileContent, error) {
@@ -209,7 +216,7 @@ func (b *Backend) readAll(ctx context.Context, p string) (string, error) {
 	var raw []byte
 	if ep, ok := b.embedded(v); ok {
 		if !b.allowed(v) {
-			return "", fmt.Errorf("path not permitted: %q", p)
+			return "", b.notPermitted(p)
 		}
 		raw, err = fs.ReadFile(b.skillFS, ep)
 	} else {
@@ -244,7 +251,7 @@ func (b *Backend) LsInfo(ctx context.Context, req *filesystem.LsInfoRequest) ([]
 	}
 	if ep, ok := b.embedded(v); ok {
 		if !b.allowed(v) {
-			return nil, fmt.Errorf("path not permitted: %q", req.Path)
+			return nil, b.notPermitted(req.Path)
 		}
 		return b.lsEmbedded(v, ep)
 	}
@@ -319,7 +326,7 @@ func (b *Backend) GlobInfo(ctx context.Context, req *filesystem.GlobInfoRequest)
 		return nil, err
 	}
 	if !b.allowed(v) {
-		return nil, fmt.Errorf("path not permitted: %q", req.Path)
+		return nil, b.notPermitted(req.Path)
 	}
 	re, err := GlobToRegexp(req.Pattern)
 	if err != nil {

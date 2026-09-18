@@ -37,8 +37,18 @@ func TestHelperSkillIsReachableFromTheSandbox(t *testing.T) {
 	}
 
 	// 提示词里点名了这个路径，否则模型没有途径知道它存在。
-	if !strings.Contains(BehavioralPrompt(snapshot{SkillDir: skill, Language: "en"}), HelperSkillPath) {
+	if !strings.Contains(BehavioralPrompt(snapshot{SkillDir: skill, SkillName: "myskill", Language: "en"}), HelperSkillPath) {
 		t.Error("BehavioralPrompt must advertise the helper skill path")
+	}
+
+	// 提示词里给模型的目标目录必须是沙箱虚拟路径（/<SkillName>），并真的可读：
+	// 给宿主绝对路径模型会照着 read_file，然后整轮浪费在 path not permitted 上。
+	prompt := BehavioralPrompt(snapshot{SkillDir: skill, SkillName: "myskill", Language: "en"})
+	if !strings.Contains(prompt, "SKILL directory path: /myskill") {
+		t.Errorf("BehavioralPrompt must advertise the sandbox virtual path of the target skill, got: %q", prompt)
+	}
+	if _, err := b.Read(context.Background(), &filesystem.ReadRequest{FilePath: "/myskill/SKILL.md"}); err != nil {
+		t.Fatalf("the advertised target skill path must be readable: %v", err)
 	}
 }
 
