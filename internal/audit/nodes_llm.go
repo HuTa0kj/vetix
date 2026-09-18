@@ -73,13 +73,34 @@ func VerifyFindings(ctx context.Context, h *stateHandle, f *llm.Factory) error {
 	if _, runErr := RunAgent(ctx, agent, VerifyPrompt(snap, needVerify)); runErr != nil && !isSoftStop(runErr) {
 		return runErr
 	}
-	verified := ParseVerifyFindings(collector.Raw())
-	if len(verified) == 0 {
-		// 复核结果没拿到：既可能是模型真的没确认任何命中，也可能是结构化输出没解析
-		// 出来。后者会让命中静默消失，必须留下痕迹。
-		gologger.Warning().Msgf("No structured verification result for %s; keeping only non-audited hits", snap.SkillName)
+	verified, ok := ParseVerifyFindings(collector.Raw())
+	if !ok {
+		// 复核结果没拿到：可能模型真的没确认任何命中，也可能结构化输出没解析出来，
+		// 而后者会让需要复核的命中整批消失——对安全扫描器来说是 fail-open。这里退回
+		// 保留原始命中并标注未复核：宁可多报几条待人工判断的，也不能因为一次畸形输出
+		// 就把 critical 命中清零。
+		gologger.Warning().Msgf("No structured verification result for %s; keeping %d audited hits as unverified",
+			snap.SkillName, len(needVerify))
+		verified = unverifiedHits(needVerify)
 	}
 	return h.with(func(s *State) { s.PluginsVerifyFindings = append(direct, verified...) })
+}
+
+// unverifiedHits 把未经复核的原始命中转成保留项，并在描述里写明它没经过 LLM 确认，
+// 免得报告读者把降级结果当成复核通过。
+func unverifiedHits(issues []plugin.Issue) []RiskFinding {
+	out := make([]RiskFinding, 0, len(issues))
+	for _, i := range issues {
+		out = append(out, RiskFinding{
+			Name:        i.Name,
+			Description: i.Description + " (unverified: the review pass produced no parsable result)",
+			Severity:    string(i.Severity),
+			Category:    i.Category,
+			FilePath:    i.FilePath,
+			Line:        i.Line,
+		})
+	}
+	return out
 }
 
 // BehavioralAnalysis：单文件走无工具的快速路径，多文件走带沙箱的 agent。
@@ -151,7 +172,9 @@ func behavioralAgent(ctx context.Context, s snapshot, f *llm.Factory) ([]*Behavi
 		BackendRoot: s.Workspace,
 		Allow: []string{
 			"/" + s.SkillName,
-			"/skills/behavioral-analysis",
+			// BehavioralPrompt 里给模型的是这个文档的完整路径，白名单与提示词
+			// 必须一致，否则模型读到的是一次"路径不允许"。
+			helperSkillDir,
 		},
 		SkillFS:  assets.SkillsFS(),
 		MaxIters: maxModelCalls,
@@ -162,7 +185,12 @@ func behavioralAgent(ctx context.Context, s snapshot, f *llm.Factory) ([]*Behavi
 	if _, runErr := RunAgent(ctx, agent, BehavioralPrompt(s)); runErr != nil && !isSoftStop(runErr) {
 		return nil, runErr
 	}
-	findings := ParseBehavioralFindings(collector.Raw())
+	findings, ok := ParseBehavioralFindings(collector.Raw())
+	if !ok {
+		// 行为分析没有可退回的原始命中，只能认下"这轮没有发现"；但必须说出来，
+		// 否则"模型没按格式提交"会伪装成"这个 SKILL 没问题"。
+		gologger.Warning().Msgf("behavioral_analysis: no structured result for %s; no behavioral findings", s.SkillName)
+	}
 	for _, f := range findings {
 		if f != nil {
 			gologger.Info().Msgf("[LLM Behavior Analysis] %s", f.Name)

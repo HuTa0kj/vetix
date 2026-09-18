@@ -8,6 +8,8 @@ import (
 
 // runinfoMarker 是 langsmith 回调在 OnStart 里打印的调试记录前缀。它输出整个 Run
 // （含完整 prompt），单个 span 可达数十 KB，上游没有任何开关可关。
+//
+// 记录一定出现在行首（回调里是 fmt.Printf("...%+v\n", run)），过滤按行首判定。
 const runinfoMarker = "[langsmith] runinfo:"
 
 // installRuninfoFilter 让 stdout 在返回的 restore 被调用之前过滤掉 runinfo 记录，
@@ -15,7 +17,8 @@ const runinfoMarker = "[langsmith] runinfo:"
 // 丢掉末尾的输出。
 //
 // 之所以能只在 stdout 上拦：vetix 自己的日志走 gologger → stderr，stdout 上只有
-// 审计报告，而报告不含这个前缀，会原样穿过滤镜。
+// 审计报告。报告内容本身可能包含这个前缀（例如扫到 vetix 自己的源码），所以过滤
+// 必须按行首判定，见 filterChunk。
 func installRuninfoFilter() func() {
 	real := os.Stdout
 	r, w, err := os.Pipe()
@@ -41,58 +44,42 @@ func installRuninfoFilter() func() {
 // filterRuninfo 把 src 复制到 dst，只丢掉 runinfo 记录本身。
 func filterRuninfo(src io.Reader, dst io.Writer) {
 	var (
-		pending  []byte
-		tmp      = make([]byte, 32*1024)
-		skipping bool
+		pending []byte
+		tmp     = make([]byte, 32*1024)
 	)
 	for {
 		n, err := src.Read(tmp)
 		if n > 0 {
 			pending = append(pending, tmp[:n]...)
-			pending = filterChunk(pending, dst, &skipping)
+			pending = filterChunk(pending, dst)
 		}
 		if err != nil {
 			break
 		}
 	}
-	// 记录若被截断则一直处于 skipping 且缓冲区为空，这里自然什么都不落盘。
-	if len(pending) > 0 {
+	// 尾部没有换行的内容：以记录前缀开头说明是一条被截断的记录（读中断），丢掉；
+	// 否则是报告的收尾，原样落盘。
+	if len(pending) > 0 && !bytes.HasPrefix(pending, []byte(runinfoMarker)) {
 		_, _ = dst.Write(pending)
 	}
 }
 
-// filterChunk 处理缓冲区里已经能确定的部分，返回尚未确定、需要留到下次的尾巴。
+// filterChunk 逐行判定并输出，返回最后一段没有换行、还不能确定是否完整的尾巴。
 //
-// 丢弃的是记录所占的字节区间而不是整行：报告也写 stdout，可能与记录交错，按行
-// 过滤会连报告一起丢掉。被丢弃的记录自带的那个换行一并删掉，不额外补，因此被
-// 记录切开的两次写入能拼回原样。
-func filterChunk(buf []byte, dst io.Writer, skipping *bool) []byte {
+// 只丢弃"整行以记录前缀开头"的行，不做子串匹配：报告文本里也可能出现这个前缀
+// （自扫 vetix 仓库就会命中 runner/quiet.go 里那一行），子串匹配会把该行从前缀处
+// 截断、还会把两个换行并成一个，表格当场错位。记录本身永远是整行输出（回调里是
+// fmt.Printf("...%+v\n")），所以行首判定足够，也不会误杀报告内容。
+func filterChunk(buf []byte, dst io.Writer) []byte {
 	for {
-		if *skipping {
-			i := bytes.IndexByte(buf, '\n')
-			if i < 0 {
-				// 记录尚未结束，整段都还不能确定。
-				return buf[:0]
-			}
-			buf = buf[i+1:]
-			*skipping = false
-			continue
-		}
-
-		i := bytes.Index(buf, []byte(runinfoMarker))
+		i := bytes.IndexByte(buf, '\n')
 		if i < 0 {
-			// 末尾可能是被读断的记录前缀，多留 len(marker)-1 个字节再判。
-			keep := len(buf) - len(runinfoMarker) + 1
-			if keep <= 0 {
-				return buf
-			}
-			_, _ = dst.Write(buf[:keep])
-			return append(buf[:0], buf[keep:]...)
+			return buf
 		}
-		if i > 0 {
-			_, _ = dst.Write(buf[:i])
+		line := buf[:i+1]
+		if !bytes.HasPrefix(line, []byte(runinfoMarker)) {
+			_, _ = dst.Write(line)
 		}
-		buf = buf[i:]
-		*skipping = true
+		buf = buf[i+1:]
 	}
 }

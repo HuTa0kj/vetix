@@ -171,6 +171,17 @@ func (f *Factory) NewAgent(ctx context.Context, role string, o AgentOptions) (ad
 		Instruction:  o.Instruction,
 		Backend:      sandbox.New(o.BackendRoot, o.Allow, o.SkillFS),
 		MaxIteration: o.MaxIters,
+		// 两个都必须关掉。
+		//
+		// WithoutGeneralSubAgent：deep 默认注册 task 工具，子 agent 有自己独立的一份
+		// MaxIteration 预算，所以"50 次模型调用"这个上限在开启时名不副实（实际可达
+		// 50 × agent 数）。提交工具是 last-write-wins 的单值 Collector，子 agent 先
+		// 提交、父 agent 再提交就会把前面的结果覆盖掉。
+		//
+		// WithoutWriteTodos：write_todos 是 coding agent 的进度清单，对一次性安全
+		// 审查没有意义，只是多一个可调用项和一段无关提示。
+		WithoutGeneralSubAgent: true,
+		WithoutWriteTodos:      true,
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
 				Tools: o.Tools,

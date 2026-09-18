@@ -3,6 +3,7 @@ package audit
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 
 	"github.com/cloudwego/eino-ext/components/model/openai"
@@ -48,7 +49,7 @@ func fastPathAttempts(cm *openai.ChatModel, m *config.Model, system, user string
 		run: func(ctx context.Context) (*schema.Message, error) {
 			info := llm.BehavioralToolInfo()
 			if info == nil {
-				return nil, nil
+				return nil, errors.New("behavioral submit tool schema is unavailable")
 			}
 			tcm, err := cm.WithTools([]*schema.ToolInfo{info})
 			if err != nil {
@@ -57,11 +58,15 @@ func fastPathAttempts(cm *openai.ChatModel, m *config.Model, system, user string
 			return tcm.Generate(ctx, msgs, model.WithToolChoice(schema.ToolChoiceForced, llm.SubmitBehavTool))
 		},
 		parse: func(msg *schema.Message) ([]*BehavioralRiskItem, bool) {
+			if msg == nil {
+				return nil, false
+			}
 			for _, tc := range msg.ToolCalls {
 				if tc.Function.Name != llm.SubmitBehavTool {
 					continue
 				}
-				return ParseBehavioralFindings(tc.Function.Arguments), true
+				// 参数解析失败也算这一档没拿到结构化结果，不能当成"模型确认零风险"。
+				return ParseBehavioralFindings(tc.Function.Arguments)
 			}
 			return nil, false
 		},
@@ -130,14 +135,17 @@ func shouldFallBack(err error) bool {
 }
 
 // runAttempts 依次尝试各档策略。任何一档产出结构化结果就返回；被网关以请求形状
-// 拒绝时降级到下一档并记录原因，最后一档失败则上抛原错误。
+// 拒绝时降级到下一档并记录原因，最后一档的请求级失败才上抛。
+//
+// 注意"请求成功但没拿到结构化输出"（模型回了散文）不算失败：它可能是后续档位能救
+// 回来的情况，也可能是最后一档的结局。后者按"没有行为发现"收尾，而不是把前面档位
+// 那个已被降级掉的错误翻出来上抛——那个错误已经不代表最终状态了，上抛它会让一次本
+// 可以出报告的扫描整体失败。
 func runAttempts(ctx context.Context, attempts []structuredAttempt) ([]*BehavioralRiskItem, error) {
-	var lastErr error
 	for i, at := range attempts {
 		msg, err := at.run(ctx)
 		if err != nil {
-			lastErr = err
-			if !shouldFallBack(err) || i == len(attempts)-1 {
+			if i == len(attempts)-1 || !shouldFallBack(err) {
 				return nil, err
 			}
 			gologger.Warning().Msgf("single_file_analysis: %s failed (%v); falling back to %s",
@@ -152,9 +160,6 @@ func runAttempts(ctx context.Context, attempts []structuredAttempt) ([]*Behavior
 			gologger.Warning().Msgf("single_file_analysis: %s produced no structured output; falling back to %s",
 				at.name, attempts[i+1].name)
 		}
-	}
-	if lastErr != nil {
-		return nil, lastErr
 	}
 	gologger.Warning().Msg("single_file_analysis: every structured output strategy failed; no behavioral findings")
 	return nil, nil

@@ -60,8 +60,8 @@ func TestFilterDropsSeveralRecords(t *testing.T) {
 
 // 记录在多字节边界处被读断时，前缀不能漏出去。
 func TestFilterHandlesSplitMarker(t *testing.T) {
-	in := "A[langsmith] runinfo: payload\nB"
-	want := "AB"
+	in := "[langsmith] runinfo: payload\nB"
+	want := "B"
 	for chunk := 1; chunk <= len(in); chunk++ {
 		if got := filter(t, in, chunk); got != want {
 			t.Errorf("chunk=%d: got %q want %q", chunk, got, want)
@@ -76,13 +76,13 @@ func TestFilterDropsUnterminatedRecord(t *testing.T) {
 	}
 }
 
-// 报告文本以记录前缀开头的一小段收尾时不能被吞掉。
-func TestFilterKeepsPartialMarkerText(t *testing.T) {
-	in := "see [langsmith] prefix docs\n"
-	want := in
-	for _, chunk := range []int{1, 4, 9, 4096} {
-		if got := filter(t, in, chunk); got != want {
-			t.Errorf("chunk=%d: got %q want %q", chunk, got, want)
+// 只有在行首的 marker 才是记录。报告行里出现同样的文本时，整行必须逐字节保留——
+// 子串匹配会把该行从前缀处截断并把两个换行并成一个，表格当场错位。
+func TestFilterKeepsMarkerTextMidLine(t *testing.T) {
+	in := "│ 12 │ high │ dumps [langsmith] runinfo: to stdout │ SKILL.md │\nNEXT ROW\n"
+	for _, chunk := range []int{1, 4, 9, 64, 4096} {
+		if got := filter(t, in, chunk); got != in {
+			t.Errorf("chunk=%d:\n got %q\nwant %q", chunk, got, in)
 		}
 	}
 }

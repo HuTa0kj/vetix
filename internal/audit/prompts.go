@@ -15,6 +15,14 @@ func OutputLanguage(lang string) string {
 	return "You need to use English output."
 }
 
+// helperSkill* 是内嵌 helper skill 在沙箱里的虚拟路径。它必须同时出现在
+// BehavioralPrompt 的提示词里和 behavioralAgent 的 Allow 白名单里：只放白名单模型
+// 根本不知道有这个文档，只写提示词则 read_file 会被沙箱拒掉。
+const (
+	helperSkillDir  = "/skills/behavioral-analysis"
+	HelperSkillPath = helperSkillDir + "/SKILL.md"
+)
+
 // VerifyPrompt 构造复核提示词。命中列表用 dataclass 风格的 repr 文本，路径前
 // 硬编码一个 "/" 前缀——提示词是在这套文本上调优的，形态不能改。
 func VerifyPrompt(s snapshot, hits []plugin.Issue) string {
@@ -35,6 +43,10 @@ func BehavioralPrompt(s snapshot) string {
 		fmt.Sprintf("The directory structure is as follows: %s\n\n", TreeRepr(s)) +
 		fmt.Sprintf("The number of files in the directory is:%d\n\n", s.FileNumber()) +
 		"The analysis begins with SKILL.md in the target directory.\n\n" +
+		// helper skill 里的严重度分级与保守判定边界比系统提示更细，按需读一次即可；
+		// 明确声明它不是分析对象，免得模型把方法论文档当成待审 SKILL 的一部分去报。
+		fmt.Sprintf("A reference checklist with the severity levels and the conservative-judgment boundaries is available at %s. "+
+			"Read it with read_file only when you need those details; it is a reference document, not part of the target being analyzed.\n\n", HelperSkillPath) +
 		OutputLanguage(s.Language) + "\n\n"
 }
 

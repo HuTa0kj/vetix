@@ -3,6 +3,7 @@ package sandbox
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -100,6 +101,172 @@ func TestEmbeddedSkillsFS(t *testing.T) {
 	sb := New(t.TempDir(), nil, os.DirFS("."))
 	if _, err := sb.Read(context.Background(), &filesystem.ReadRequest{FilePath: "/skills/x"}); err == nil {
 		t.Error("reading embedded skills without an allow entry must be rejected")
+	}
+}
+
+// glob 的字符类与花括号是上游工具说明向模型承诺的语法。不支持的话模型照写就是
+// 静默零结果，而它只会以为目录里没有这类文件——在安全扫描里就是漏报。
+func TestGlobSupportsCharClassAndBraces(t *testing.T) {
+	cases := []struct {
+		pattern string
+		match   []string
+		noMatch []string
+	}{
+		{"[abc].md", []string{"a.md", "b.md"}, []string{"d.md", "[abc].md", "x/a.md"}},
+		{"*.{ts,tsx}", []string{"a.ts", "a.tsx"}, []string{"a.js", "a.tsx2"}},
+		{"{a,b}/*.md", []string{"a/x.md", "b/y.md"}, []string{"c/x.md", "a/x.txt"}},
+		{"{a,{b,c}}/*.md", []string{"a/x.md", "b/x.md", "c/x.md"}, []string{"d/x.md"}},
+		{"[!abc].md", []string{"d.md"}, []string{"a.md"}},
+		{"**/*.md", []string{"x.md", "a/x.md", "a/b/x.md"}, []string{"x.txt"}},
+		{"a?c.md", []string{"abc.md"}, []string{"ac.md", "a/c.md"}},
+		{"literal[.md", []string{"literal[.md"}, nil},
+	}
+	for _, c := range cases {
+		re, err := GlobToRegexp(c.pattern)
+		if err != nil {
+			t.Errorf("%q: compile error %v", c.pattern, err)
+			continue
+		}
+		for _, m := range c.match {
+			if !re.MatchString(m) {
+				t.Errorf("%q must match %q (regexp %s)", c.pattern, m, re)
+			}
+		}
+		for _, m := range c.noMatch {
+			if re.MatchString(m) {
+				t.Errorf("%q must not match %q (regexp %s)", c.pattern, m, re)
+			}
+		}
+	}
+}
+
+// 读长文件时输出封顶，但必须说清楚是被截断的视图，否则模型会把"到此为止"当成
+// 文件真的没有更多内容。
+func TestReadTruncatesWithNoticeAndOffsetContinues(t *testing.T) {
+	root := t.TempDir()
+	skill := filepath.Join(root, "myskill")
+	must(t, os.MkdirAll(skill, 0o755))
+	var sb strings.Builder
+	for i := 0; i < 1500; i++ {
+		fmt.Fprintf(&sb, "line %d\n", i+1)
+	}
+	must(t, os.WriteFile(filepath.Join(skill, "big.txt"), []byte(sb.String()), 0o644))
+	b := New(root, []string{"/myskill"}, nil)
+	ctx := context.Background()
+
+	c, err := b.Read(ctx, &filesystem.ReadRequest{FilePath: "/myskill/big.txt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.Count(c.Content, "\n"); n > maxReadLines+1 {
+		t.Errorf("output not capped: %d lines", n)
+	}
+	if !strings.Contains(c.Content, "output truncated") {
+		t.Error("truncation must be announced")
+	}
+	// 续读必须能拿到被截断掉的部分。
+	c2, err := b.Read(ctx, &filesystem.ReadRequest{FilePath: "/myskill/big.txt", Offset: 1200})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(c2.Content, "line 1200") {
+		t.Error("offset must reach past the cap")
+	}
+}
+
+// grep 先走封顶的 Read 再搜会在长文件上漏报，这里锁定它读全文。
+func TestGrepSeesPastTheReadCap(t *testing.T) {
+	root := t.TempDir()
+	skill := filepath.Join(root, "myskill")
+	must(t, os.MkdirAll(skill, 0o755))
+	var sb strings.Builder
+	for i := 0; i < 3000; i++ {
+		fmt.Fprintf(&sb, "filler %d\n", i)
+	}
+	sb.WriteString("NEEDLE after the read cap\n")
+	must(t, os.WriteFile(filepath.Join(skill, "big.txt"), []byte(sb.String()), 0o644))
+
+	b := New(root, []string{"/myskill"}, nil)
+	got, err := b.GrepRaw(context.Background(), &filesystem.GrepRequest{Pattern: "NEEDLE", Path: "/myskill"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Line != 3001 {
+		t.Fatalf("match past the cap must be reported, got %+v", got)
+	}
+}
+
+// -A/-B 与多行的处理口径：上下文要真的返回，多行要显式报错而不是静默忽略。
+func TestGrepContextAndMultiline(t *testing.T) {
+	root := t.TempDir()
+	skill := filepath.Join(root, "myskill")
+	must(t, os.MkdirAll(skill, 0o755))
+	must(t, os.WriteFile(filepath.Join(skill, "a.txt"), []byte("before\nHIT\nafter\n"), 0o644))
+	b := New(root, []string{"/myskill"}, nil)
+	ctx := context.Background()
+
+	got, err := b.GrepRaw(ctx, &filesystem.GrepRequest{Pattern: "HIT", Path: "/myskill", BeforeLines: 1, AfterLines: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || !strings.Contains(got[0].Content, "before") || !strings.Contains(got[0].Content, "after") {
+		t.Fatalf("context lines must be returned, got %+v", got)
+	}
+	if _, err := b.GrepRaw(ctx, &filesystem.GrepRequest{Pattern: "HIT", Path: "/myskill", EnableMultiline: true}); err == nil {
+		t.Error("multiline must be rejected explicitly, not silently ignored")
+	}
+}
+
+// grep 命中过多时必须封顶，并且把"这是被削过的视图"告诉模型——否则"没搜到"会被
+// 当成"不存在"。
+func TestGrepCapsMatchesAndSaysSo(t *testing.T) {
+	root := t.TempDir()
+	skill := filepath.Join(root, "myskill")
+	must(t, os.MkdirAll(skill, 0o755))
+	var sb strings.Builder
+	for i := 0; i < maxGrepMatches+50; i++ {
+		sb.WriteString("HIT repeated line\n")
+	}
+	must(t, os.WriteFile(filepath.Join(skill, "a.txt"), []byte(sb.String()), 0o644))
+
+	got, err := New(root, []string{"/myskill"}, nil).GrepRaw(context.Background(),
+		&filesystem.GrepRequest{Pattern: "HIT", Path: "/myskill"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) > maxGrepMatches+1 {
+		t.Fatalf("matches not capped: %d", len(got))
+	}
+	last := got[len(got)-1]
+	if last.Path != "[sandbox]" || !strings.Contains(last.Content, "truncated") {
+		t.Fatalf("truncation must be announced, got %+v", last)
+	}
+}
+
+// ls/glob 的输出同样封顶，避免一次列目录就把上下文预算吃光。
+func TestLsAndGlobAreCapped(t *testing.T) {
+	root := t.TempDir()
+	skill := filepath.Join(root, "myskill")
+	must(t, os.MkdirAll(skill, 0o755))
+	for i := 0; i < maxListEntries+20; i++ {
+		must(t, os.WriteFile(filepath.Join(skill, fmt.Sprintf("f%04d.txt", i)), []byte("x"), 0o644))
+	}
+	b := New(root, []string{"/myskill"}, nil)
+	ctx := context.Background()
+
+	ls, err := b.LsInfo(ctx, &filesystem.LsInfoRequest{Path: "/myskill"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ls) > maxListEntries+1 || !strings.Contains(ls[len(ls)-1].Path, "truncated") {
+		t.Fatalf("ls must be capped with a notice, got %d entries, last=%+v", len(ls), ls[len(ls)-1])
+	}
+	gl, err := b.GlobInfo(ctx, &filesystem.GlobInfoRequest{Path: "/myskill", Pattern: "**/*.txt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(gl) > maxListEntries+1 || !strings.Contains(gl[len(gl)-1].Path, "truncated") {
+		t.Fatalf("glob must be capped with a notice, got %d entries", len(gl))
 	}
 }
 

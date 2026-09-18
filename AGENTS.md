@@ -62,9 +62,12 @@ Per-model `thinking` toggles reasoning (defaults to on for `pro`, off for `lite`
 
 - **Defense in depth** — cheap IOCs are caught by plugins; semantic / multi-file chains by the LLM. Neither alone is sufficient.
 - **Verify before reporting** — high-recall plugin hits are LLM-confirmed against real file content before reaching the report.
-- **Read-only by construction** — the sandbox backend refuses every write, serves only allow-listed paths, and refuses symlinks anywhere in the path. Mutating tools are hidden from the model as a second layer.
+- **Read-only by construction** — the sandbox backend refuses every write, serves only allow-listed paths, and refuses symlinks anywhere in the path. Mutating tools are hidden from the model as a second layer. Mounting `SkillFS` does not widen access: `/skills/**` still has to be listed in `Allow`.
 - **The backend is the boundary, not the model's tool list** — eino's `ToolInfos` filtering only affects visibility; a hallucinated call to a hidden tool still dispatches. Enforcement lives in `internal/sandbox`.
+- **Terminal output is sanitized** — finding text comes from the scanned SKILL and is written to a terminal, so `report.Render` strips control sequences. Skipping that lets a scanned file rewrite the user's screen or clipboard.
 - **Structured output with a repair net** — agents submit findings through a forced named tool; malformed arguments fall back to `internal/jsonx` so the pipeline still produces usable findings.
+- **Fail closed on the review pass** — if `plugins_findings_verify` produces no parsable result, the audited hits are kept and marked unverified rather than dropped. Silently reporting nothing is the worst available outcome for a scanner.
+- **Output is capped, not offloaded** — eino's large-result offload writes through the backend, which is read-only by design, so a big `read_file` would fail outright. `internal/sandbox` truncates instead and says so; the model can page with `offset`.
 - **Prompt-visible text is load-bearing** — the tree representation and hit list keep their tuned shape, because the prompts were optimized against that exact text. `internal/pytext` exists for this reason.
 
 ## Guidelines
