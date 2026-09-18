@@ -116,18 +116,28 @@ func BehavioralToolInfo() *schema.ToolInfo {
 func WithResponseFormat(schemaName string, raw json.RawMessage) model.Option {
 	var parsed any
 	_ = json.Unmarshal(raw, &parsed)
+	return withResponseFormat(map[string]any{
+		"type": "json_schema",
+		"json_schema": map[string]any{
+			"name":   schemaName,
+			"schema": parsed,
+		},
+	})
+}
+
+// WithJSONObjectFormat 只要求网关返回合法 JSON，不约束 schema。比 json_schema 弱，
+// 但兼容性最好，作为 schema 被网关拒绝时的下一档。
+func WithJSONObjectFormat() model.Option {
+	return withResponseFormat(map[string]any{"type": "json_object"})
+}
+
+func withResponseFormat(rf map[string]any) model.Option {
 	return openai.WithRequestPayloadModifier(func(ctx context.Context, _ []*schema.Message, body []byte) ([]byte, error) {
 		var m map[string]any
 		if err := json.Unmarshal(body, &m); err != nil {
 			return nil, err
 		}
-		m["response_format"] = map[string]any{
-			"type": "json_schema",
-			"json_schema": map[string]any{
-				"name":   schemaName,
-				"schema": parsed,
-			},
-		}
+		m["response_format"] = rf
 		return json.Marshal(m)
 	})
 }

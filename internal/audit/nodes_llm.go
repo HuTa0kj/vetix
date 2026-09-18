@@ -7,13 +7,10 @@ import (
 	"fmt"
 
 	"github.com/cloudwego/eino/adk"
-	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/components/tool"
-	"github.com/cloudwego/eino/schema"
 	"github.com/projectdiscovery/gologger"
 
 	"vetix/internal/assets"
-	"vetix/internal/jsonx"
 	"vetix/internal/llm"
 	"vetix/internal/plugin"
 )
@@ -116,49 +113,18 @@ func singleFileAnalysis(ctx context.Context, s *State, f *llm.Factory) ([]*Behav
 		return nil, err
 	}
 
-	// 结构化输出的两条路都要走，对应 Python 的 LangChain AutoStrategy：
-	// 网关支持 json_schema 时用 response_format 约束；否则退化成"强制调用一个以
-	// schema 类名命名的工具"，这正是 LangChain ToolStrategy 的行为，也是弱模型
-	// 在 OpenAI 兼容网关上的实际路径。
-	if m.ResponseFormat == "json_schema" {
-		msg, err := cm.Generate(ctx, []*schema.Message{
-			schema.SystemMessage(instruction),
-			schema.UserMessage(SingleFilePrompt(s)),
-		}, llm.WithResponseFormat(llm.SubmitBehavTool, behavioralSchema()))
-		if err != nil {
-			return nil, err
-		}
-		return parseBehavioralContent(msg.Content), nil
-	}
-
-	tcm, err := cm.WithTools([]*schema.ToolInfo{llm.BehavioralToolInfo()})
+	// 依次尝试各档结构化输出方案。网关对"思考模式 + 强制工具调用"的支持差别很大，
+	// 被拒时降级而不是整轮失败。
+	findings, err := runAttempts(ctx, fastPathAttempts(cm, m, instruction, SingleFilePrompt(s)))
 	if err != nil {
 		return nil, err
 	}
-	msg, err := tcm.Generate(ctx, []*schema.Message{
-		schema.SystemMessage(instruction),
-		schema.UserMessage(SingleFilePrompt(s)),
-	}, model.WithToolChoice(schema.ToolChoiceForced, llm.SubmitBehavTool))
-	if err != nil {
-		return nil, err
+	for _, f := range findings {
+		if f != nil {
+			gologger.Info().Msgf("[LLM Behavior Analysis] %s", f.Name)
+		}
 	}
-	for _, tc := range msg.ToolCalls {
-		if tc.Function.Name != llm.SubmitBehavTool {
-			continue
-		}
-		findings := ParseBehavioralFindings(tc.Function.Arguments)
-		if len(findings) == 0 {
-			gologger.Warning().Msg("single_file_analysis: no findings from LLM")
-		}
-		for _, f := range findings {
-			if f != nil {
-				gologger.Info().Msgf("[LLM Behavior Analysis] %s", f.Name)
-			}
-		}
-		return findings, nil
-	}
-	gologger.Warning().Msg("single_file_analysis: model did not call the submit tool")
-	return nil, nil
+	return findings, nil
 }
 
 func behavioralAgent(ctx context.Context, s *State, f *llm.Factory) ([]*BehavioralRiskItem, error) {
@@ -206,24 +172,6 @@ func behavioralAgent(ctx context.Context, s *State, f *llm.Factory) ([]*Behavior
 // 默认软终止（补一条最终消息，仍尝试解析），而 eino 抛错会让整轮结果作废。
 func isSoftStop(err error) bool {
 	return errors.Is(err, adk.ErrExceedMaxIterations) || errors.Is(err, adk.ErrExceedMaxRetries)
-}
-
-// parseBehavioralContent 解析无工具路径的响应正文。
-//
-// 这里用 value slice 之外的字段名兼容：真实 schema 用 line_number，但模型在
-// 自由文本里偶尔会写成 line，两种都接受，避免整条结果丢掉。
-func parseBehavioralContent(content string) []*BehavioralRiskItem {
-	var out struct {
-		RiskFound bool                  `json:"risk_found"`
-		Findings  []*BehavioralRiskItem `json:"findings"`
-	}
-	if content == "" {
-		return nil
-	}
-	if err := jsonx.Unmarshal([]byte(content), &out); err != nil {
-		return nil
-	}
-	return out.Findings
 }
 
 func behavioralSchema() json.RawMessage {

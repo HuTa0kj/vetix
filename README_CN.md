@@ -95,7 +95,7 @@ langsmith:
 |-------|-------------|
 | `models` | 可用模型列表。每条必须提供 `id`、`api_key`、`base_url`；`temperature`、`extra_body`、`extra_headers`、`thinking`、`response_format` 可选。`base_url` 要指向 API 根路径，多数网关需要带 `/v1`，否则会返回网页而不是 JSON。 |
 | `models[].extra_headers` | 随每次请求发送的额外 HTTP 头，例如网关的路由标识。在传输层注入，agent 内部的模型调用同样生效。 |
-| `models[].thinking` | 是否请求思考。默认 `pro` 角色开启、`lite` 角色关闭。 |
+| `models[].thinking` | 是否请求思考。默认 `pro` 角色开启、`lite` 角色关闭。注意部分网关在思考模式下会拒绝强制工具调用，单文件快速路径会识别这种拒绝并自动改用 `response_format`。 |
 | `models[].response_format` | `tool`（默认）用强制具名工具调用来拿结构化输出；`json_schema` 使用网关原生的 `response_format`。 |
 | `roles.lite` | 轻量模型，用于插件命中复核。 |
 | `roles.pro` | 推理模型，用于行为分析。 |

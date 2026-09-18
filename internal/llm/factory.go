@@ -1,8 +1,10 @@
 package llm
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"io/fs"
 	"net/http"
 	"strings"
@@ -93,26 +95,37 @@ func (t *apiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !isJSONish(resp.Header.Get("Content-Type")) {
-		ct := resp.Header.Get("Content-Type")
-		resp.Body.Close()
-		// base_url 写错（最常见的是漏了 /v1）时网关会返回 HTML 页面，底层 SDK
-		// 只会报 "invalid character '<' looking for beginning of value"，看不出
-		// 是哪个地址错了。
-		return nil, fmt.Errorf(
-			"%s %s returned %q instead of JSON — check that base_url points at the API root "+
-				"(most OpenAI-compatible gateways need the /v1 suffix)", req.Method, req.URL, ct)
+	// 只拦"打到了网页"这一种情况。判断依据必须是响应体本身像 HTML，不能只看
+	// Content-Type：Go 把没显式设置类型的 JSON 嗅探成 text/plain，不少网关就是
+	// 这样，而底层 SDK 根本不看这个头，照常解析成功；只看头会把这些能用的网关
+	// 误判成地址写错。错误响应也放行，让 SDK 解出状态码和 message。
+	if resp.StatusCode < 400 {
+		br := bufio.NewReaderSize(resp.Body, 512)
+		peek, _ := br.Peek(512)
+		if looksLikeHTML(peek) {
+			resp.Body.Close()
+			// base_url 写错（最常见的是漏了 /v1）时网关会返回前端页面，底层
+			// SDK 只会报 "invalid character '<' looking for beginning of value"，
+			// 完全看不出是哪个地址错了。
+			return nil, fmt.Errorf(
+				"%s %s returned an HTML page instead of JSON — check that base_url points "+
+					"at the API root (most OpenAI-compatible gateways need the /v1 suffix)",
+				req.Method, req.URL)
+		}
+		// 探测用的字节已经被读进缓冲区，必须还回去，否则调用方拿到的是被截断的
+		// 响应体（表现为 EOF）。
+		resp.Body = struct {
+			io.Reader
+			io.Closer
+		}{br, resp.Body}
 	}
 	return resp, nil
 }
 
-// isJSONish 放行 JSON 与 SSE。流式响应是 text/event-stream，不能当成错误。
-func isJSONish(contentType string) bool {
-	ct := strings.ToLower(contentType)
-	if ct == "" {
-		return true
-	}
-	return strings.Contains(ct, "json") || strings.Contains(ct, "event-stream")
+// looksLikeHTML 判断响应体开头是否是网页标记。
+func looksLikeHTML(b []byte) bool {
+	s := strings.ToLower(strings.TrimSpace(string(b)))
+	return strings.HasPrefix(s, "<!doctype") || strings.HasPrefix(s, "<html") || strings.HasPrefix(s, "<?xml")
 }
 
 // AgentOptions 描述一次 agent 构造所需的全部输入。
