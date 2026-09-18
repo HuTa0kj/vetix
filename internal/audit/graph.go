@@ -114,6 +114,3 @@ func stateFrom(ctx context.Context) *State {
 	}
 	return &State{}
 }
-
-// StateFrom 取出本次运行共享的 State，供调用方在 run 结束后读取结果。
-func StateFrom(ctx context.Context) *State { return stateFrom(ctx) }

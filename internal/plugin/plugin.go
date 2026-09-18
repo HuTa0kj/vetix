@@ -62,17 +62,6 @@ func Register(name string, p Plugin) {
 	registry = append(registry, named{name: name, p: p})
 }
 
-func All() []named { return registry }
-
-func Names() []string {
-	out := make([]string, 0, len(registry))
-	for _, n := range registry {
-		out = append(out, n.name)
-	}
-	sort.Strings(out)
-	return out
-}
-
 func relativePath(filePath, skillDir string) string {
 	rel, err := filepath.Rel(skillDir, filePath)
 	if err != nil {

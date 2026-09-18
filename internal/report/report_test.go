@@ -70,9 +70,9 @@ func TestRenderOutputHasNoEscapesFromFindings(t *testing.T) {
 	for _, c := range append(paletteColors(),
 		text.FgHiBlue, text.FgGreen, text.FgHiBlack, text.FgWhite) {
 		code := strconv.Itoa(int(c))
-		own["\x1b["+code+"m"] = true          // 单色
-		own["\x1b["+code+";1m"] = true        // 色 + 粗体（严重度徽标）
-		own["\x1b[1;"+code+"m"] = true        // 粗体在前（text.Colors 的组合顺序可能不同）
+		own["\x1b["+code+"m"] = true   // 单色
+		own["\x1b["+code+";1m"] = true // 色 + 粗体（严重度徽标）
+		own["\x1b[1;"+code+"m"] = true // 粗体在前（text.Colors 的组合顺序可能不同）
 	}
 	for seq := range own {
 		out = strings.ReplaceAll(out, seq, "")

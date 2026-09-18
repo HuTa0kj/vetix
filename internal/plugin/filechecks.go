@@ -12,8 +12,8 @@ type LargeFileCheckPlugin struct{}
 const largeFileMaxBytes = 2 * 1024 * 1024
 
 func (LargeFileCheckPlugin) Scan(skillDir, filePath, content string) []Issue {
-	// 用解码后的字节数而不是磁盘原始大小：读文本时非法字节会被替换成 U+FFFD，
-	// 长度与原始文件不同。
+	// content 是原始字节的原样字符串转换，len 与磁盘上的文件大小一致。以读入的
+	// 内容为准而不是 stat，插件只对被扫描到的内容负责。
 	size := len(content)
 	if size <= largeFileMaxBytes {
 		return nil

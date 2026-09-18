@@ -283,10 +283,10 @@ func printKV(key, val string, width int) {
 
 // printFinding 打印一条发现：
 //
-//	  1. ● CRITICAL · Remote Execution · SKILL.md:31
-//	     Base64-encoded curl payload piped to bash
+//  1. ● CRITICAL · Remote Execution · SKILL.md:31
+//     Base64-encoded curl payload piped to bash
 //
-//	     Line 31, presented as a MacOS setup instruction, ...
+//     Line 31, presented as a MacOS setup instruction, ...
 //
 // 标题与描述各自独立折行，互不影响；gap 为 true 时先空一行与上一条隔开。
 func printFinding(num int, name, severity, category, file string, line int, desc string, width int, gap bool) {

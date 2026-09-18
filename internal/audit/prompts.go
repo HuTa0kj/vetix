@@ -55,8 +55,8 @@ func BehavioralPrompt(s snapshot) string {
 func SingleFilePrompt(s snapshot) string {
 	return "Please perform a behavioral security analysis on the complete content of SKILL.md below to identify security risks that the rules cannot recognize.\n\n" +
 		// 单文件快速路径没有工具，路径只是文本；仍用虚拟路径，避免把宿主绝对路径
-	// 写进提示词。行内无空格是调优形态，保持原样。
-	fmt.Sprintf("SKILL directory path:/%s\n\n", s.SkillName) +
+		// 写进提示词。行内无空格是调优形态，保持原样。
+		fmt.Sprintf("SKILL directory path:/%s\n\n", s.SkillName) +
 		fmt.Sprintf("The directory structure is as follows:%s\n\n", TreeRepr(s)) +
 		"The following is the full content of SKILL.md:\n\n" +
 		fmt.Sprintf("```markdown\n%s\n```\n\n", s.SkillContent) +

@@ -2,7 +2,6 @@ package pluginutils
 
 import (
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -83,27 +82,6 @@ func IsBinaryFile(filePath string) bool {
 	return ExistNonText(chunk)
 }
 
-// DecodeReplace 按 UTF-8 解码，非法字节替换成 U+FFFD，因此字节长度可能与磁盘上的
-// 原始长度不同。插件里凡是用到"文件大小/行数"的地方都必须走这个函数。
-func DecodeReplace(raw []byte) string {
-	if utf8.Valid(raw) {
-		return string(raw)
-	}
-	var sb strings.Builder
-	sb.Grow(len(raw))
-	for i := 0; i < len(raw); {
-		r, size := utf8.DecodeRune(raw[i:])
-		if r == utf8.RuneError && size == 1 {
-			sb.WriteRune(utf8.RuneError)
-			i++
-			continue
-		}
-		sb.Write(raw[i : i+size])
-		i += size
-	}
-	return sb.String()
-}
-
 // SplitLines 按 Unicode 行边界切分：末尾换行不产生额外空行，
 // \r\n / \r / \v / \f / \x1c-\x1e / \x85 / \u2028 / \u2029 都算换行。
 func SplitLines(s string) []string {
@@ -149,9 +127,4 @@ func HumanBytes(n int) string {
 	default:
 		return strconv.FormatFloat(float64(n)/(1024*1024), 'f', 1, 64) + " MB"
 	}
-}
-
-// CleanVirtual 把路径统一成以 / 开头的斜杠形式。
-func CleanVirtual(p string) string {
-	return path.Clean(filepath.ToSlash(p))
 }
