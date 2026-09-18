@@ -8,8 +8,8 @@ An LLM-agent-based scanner for [SKILL](https://docs.claude.com/en/docs/claude-co
 
 - **Plugin-based static scanning** — rules catch deterministic security risks.
 - **LLM cross-validation** — every plugin hit is re-judged against the real file content by an LLM, so high-recall rules don't drown the final report.
-- **Behavioral analysis agent** — inside a virtual filesystem, traces the full chain "instruction → tool call → host impact" to uncover risks the rules miss: disguised commands, Base64 payloads, remote code loading, prompt injection, credential theft, persistence, and more.
-- **Defense-in-depth sandbox** — virtual filesystems, explicit read allow-lists, and a blanket write deny isolate the real host.
+- **Behavioral analysis agent** — inside a read-only virtual filesystem, traces the full chain "instruction → tool call → host impact" to uncover risks the rules miss: disguised commands, Base64 payloads, remote code loading, prompt injection, credential theft, persistence, and more.
+- **Defense-in-depth sandbox** — the agent reads only inside the skill, symlinks are refused, every write is rejected at the backend, and mutating tools are hidden from the model.
 - **LangSmith tracing** — every agent run is observable end-to-end.
 
 ## Detection Categories
@@ -40,13 +40,17 @@ Traditional rule-based scanners rely on predefined patterns and signatures, whic
 
 ## Deployment
 
-### uv
+### Build
+
+Requires Go 1.25+. The module proxy must be reachable; in this environment `proxy.golang.org` is blocked, so the repo assumes `goproxy.cn`:
 
 ```bash
 git clone git@github.com:HuTa0kj/vetix.git
 cd vetix
-uv sync
+go build -o vetix ./cmd/vetix
 ```
+
+Prompts and the helper skill are embedded into the binary, so the executable is self-contained. Cross-compile all four targets with `./build.sh`.
 
 Copy the example config and fill in your model credentials:
 
@@ -54,7 +58,7 @@ Copy the example config and fill in your model credentials:
 cp example.config.yaml config.yaml
 ```
 
-`config.yaml` defines two LLM roles: a lightweight model for plugin-hit verification, and a stronger model for behavioral analysis.
+`config.yaml` is read from the current working directory by default (override with `-config`). It defines two LLM roles: a lightweight model for plugin-hit verification, and a stronger model for behavioral analysis.
 
 ```yaml
 models:
@@ -63,14 +67,16 @@ models:
     api_key: ""
     base_url: "https://example.com/v1"
     temperature: 0.7
-    extra_body: {"thinking": {"type": "disabled"}}
+    extra_body: {}
+    thinking: true          # inject {"thinking": {"type": "enabled"}} into the request body
 
   - id: deepseek-v4-flash
     name: DeepSeek-V4-Flash
     api_key: ""
     base_url: "https://example.com/v1"
     temperature: 0.7
-    extra_body: {"thinking": {"type": "disabled"}}
+    extra_body: {}
+    thinking: false
 
 roles:
   lite: deepseek-v4-flash
@@ -78,7 +84,7 @@ roles:
 
 # Optional: LangSmith tracing
 langsmith:
-  tracing: true
+  tracing: false
   endpoint: "https://api.smith.langchain.com"
   api_key: ""
   project: ""
@@ -86,35 +92,36 @@ langsmith:
 
 | Field | Description |
 |-------|-------------|
-| `models` | Available LLMs. Each entry requires `id`, `api_key`, `base_url`; `temperature` and `extra_body` are optional. |
-| `roles.lite` | Fast model, for speed-oriented, less complex tasks. |
-| `roles.pro` | Reasoning model, for tasks that require complex reasoning. |
-| `langsmith` | LangSmith tracing config (optional). |
+| `models` | Available LLMs. Each entry requires `id`, `api_key`, `base_url`; `temperature`, `extra_body`, `thinking` and `response_format` are optional. |
+| `models[].thinking` | Whether to request reasoning. Defaults to on for the `pro` role and off for `lite`. |
+| `models[].response_format` | `tool` (default) forces a named tool call for structured output; `json_schema` uses the gateway's native `response_format`. |
+| `roles.lite` | Fast model, for plugin-hit verification. |
+| `roles.pro` | Reasoning model, for behavioral analysis. |
+| `langsmith` | LangSmith tracing config (optional). Note that eino's span shape differs from LangChain's, so traces are not comparable with the Python-era records. |
 
 Common commands
 
 ```bash
 # Scan a SKILL directory
-uv run vetix scan --source xxx
-
-# Short form
-uv run vetix scan -s xxx
+./vetix -s xxx
 
 # Enable debug logging
-uv run vetix scan -s xxx --debug
+./vetix -s xxx -d
 
-# Use Chinese output
-uv run vetix scan -s xxx -l zh
+# Use Chinese output for the findings text
+./vetix -s xxx -l zh
 
 # Only render the report in the terminal, do not save a JSON file
-uv run vetix scan -s xxx --no-output
+./vetix -s xxx -no-output
 
-# Custom output directory
-uv run vetix scan -s xxx --output-dir ./reports
+# Custom output directory and config path
+./vetix -s xxx -output-dir ./reports -c /etc/vetix/config.yaml
 
-# Create a new plugin
-uv run vetix create --plugin "my check"
+# Ignore a cached report and re-scan
+./vetix -s xxx -force
 ```
+
+Reports are written to `<output-dir>/<skill-hash-prefix>/report.json`. A second scan of an unchanged skill renders the cached report instead of re-running the pipeline; pass `-force` to bypass the cache.
 
 ### Docker
 
@@ -135,23 +142,34 @@ Run a scan
 
 ```bash
 docker run --rm \
-  -v "$PWD/config.yaml:/app/config.yaml:ro" \
+  -v "$PWD/config.yaml:/work/config.yaml:ro" \
   -v "$PWD/examples/skills/xxx:/skills/xxx:ro" \
-  -v "$PWD/output:/app/output" \
-  vetix:latest scan -s /skills/xxx
+  -v "$PWD/output:/work/output" \
+  vetix:latest -s /skills/xxx
 ```
 
 ### Docker Compose
 
 ```bash
-docker compose run --rm vetix scan -s /skills/xxx
+docker compose run --rm vetix -s /skills/xxx
+```
+
+## Adding a Plugin
+
+Plugins live in `internal/plugin/`. The Go binary has no runtime discovery — add a file implementing `Plugin`, then register it in `internal/plugin/registry.go`:
+
+```go
+type MyCheckPlugin struct{}
+
+func (MyCheckPlugin) Scan(skillDir, filePath, content string) []Issue {
+    // Return every hit; set AuditRequired to route a hit through LLM verification.
+    return nil
+}
 ```
 
 ## Agent Tracing
 
 Configure [LangSmith](https://smith.langchain.com/) in `config.yaml` to trace every agent run — model calls, tool invocations, and structured outputs are all visible.
-
-![](./images/langsmith.png)
 
 ## License
 

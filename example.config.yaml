@@ -1,24 +1,36 @@
 models:
+  # 每个模型是一个 OpenAI 兼容端点。api_key / base_url 必填，其余可选。
   - id: deepseek-v4-pro
     name: DeepSeek-V4-Pro
     api_key: ""
     base_url: "https://xxx.com/v1"
     temperature: 0.7
-    extra_body: {"thinking": {"type": "disabled"}}
+    extra_body: {}
+    # thinking 控制是否在请求体里注入 {"thinking": {"type": "enabled"}}。
+    # 缺省按角色取值：pro 开启、lite 关闭。
+    thinking: true
+    # response_format 只在无工具的快速路径（单文件 SKILL）上生效。
+    #   tool        —— 走强制工具调用，等价于 LangChain 的 ToolStrategy（默认）
+    #   json_schema —— 网关支持 response_format 的 json_schema 时启用
+    response_format: tool
 
   - id: deepseek-v4-flash
     name: DeepSeek-V4-Flash
     api_key: ""
     base_url: "https://xxx.com/v1"
     temperature: 0.7
-    extra_body: {"thinking": {"type": "disabled"}}
+    extra_body: {}
+    thinking: false
+    response_format: tool
 
 roles:
+  # lite：插件命中复核。pro：行为分析。
   lite: deepseek-v4-flash
   pro: deepseek-v4-pro
 
+# 可选。注意 eino 的 span 结构与 LangChain 不同，历史追踪记录无法互相对照。
 langsmith:
-  tracing: true
+  tracing: false
   endpoint: "https://api.smith.langchain.com"
   api_key: ""
   project: ""

@@ -8,8 +8,8 @@
 
 - **基于插件的静态扫描** —— 通过规则识别确定性安全风险。
 - **LLM 交叉校验** —— 每个插件命中的风险项都会被 LLM 结合真实文件内容再次判断，避免高召回规则淹没最终报告。
-- **行为分析 Agent** —— 在虚拟文件系统下完整追踪「指令 → 工具调用 → 对主机的影响」执行链，发现规则无法识别的风险：伪装命令、Base64 载荷、远程代码加载、提示词注入、敏感文件访问、持久化等。
-- **纵深防御沙箱** —— 虚拟文件系统、显式读允许列表、全局写拒绝，隔离真实主机。
+- **行为分析 Agent** —— 在只读虚拟文件系统下完整追踪「指令 → 工具调用 → 对主机的影响」执行链，发现规则无法识别的风险：伪装命令、Base64 载荷、远程代码加载、提示词注入、敏感文件访问、持久化等。
+- **纵深防御沙箱** —— Agent 只能读到 SKILL 自身目录，符号链接一律拒绝，写入在后端层被整体拒绝，写类工具也不出现在模型可见的工具列表里。
 - **LangSmith 追踪** —— 端到端可观测每一次 Agent 运行。
 
 ## 检测分类
@@ -40,22 +40,25 @@
 
 ## 部署运行
 
-### uv
+### 编译
+
+需要 Go 1.25 及以上。本机访问 `proxy.golang.org` 不通，仓库按 `goproxy.cn` 配置：
 
 ```bash
 git clone git@github.com:HuTa0kj/vetix.git
 cd vetix
-uv sync
+go build -o vetix ./cmd/vetix
 ```
 
+提示词与 helper skill 通过 `//go:embed` 编进二进制，可执行文件自包含。需要四个平台的产物时执行 `./build.sh`。
 
-复制示例配置文件并填写模型凭据：
+复制配置模板并填入模型凭据：
 
 ```bash
 cp example.config.yaml config.yaml
 ```
 
-`config.yaml` 需要定义两个 LLM 角色：一个轻量模型用于插件命中校验，一个强模型用于行为分析。
+`config.yaml` 默认从当前工作目录读取，可用 `-config` 指定其他路径。它定义了两个 LLM 角色：用于插件命中复核的轻量模型，以及用于行为分析的更强模型。
 
 ```yaml
 models:
@@ -64,14 +67,16 @@ models:
     api_key: ""
     base_url: "https://example.com/v1"
     temperature: 0.7
-    extra_body: {"thinking": {"type": "disabled"}}
+    extra_body: {}
+    thinking: true          # 在请求体里注入 {"thinking": {"type": "enabled"}}
 
   - id: deepseek-v4-flash
     name: DeepSeek-V4-Flash
     api_key: ""
     base_url: "https://example.com/v1"
     temperature: 0.7
-    extra_body: {"thinking": {"type": "disabled"}}
+    extra_body: {}
+    thinking: false
 
 roles:
   lite: deepseek-v4-flash
@@ -79,43 +84,44 @@ roles:
 
 # 可选：LangSmith 追踪
 langsmith:
-  tracing: true
+  tracing: false
   endpoint: "https://api.smith.langchain.com"
   api_key: ""
   project: ""
 ```
 
 | 字段 | 说明 |
-|------|------|
-| `models` | 可用 LLM 列表。每项需配置 `id`、`api_key`、`base_url`；`temperature`、`extra_body` 可选。 |
-| `roles.lite` | 快速模型，适用于追求速度、不复杂的任务。 |
-| `roles.pro` | 推理模型，适用于需要复杂推理的任务。 |
-| `langsmith` | LangSmith 追踪配置（可选）。 |
+|-------|-------------|
+| `models` | 可用模型列表。每条必须提供 `id`、`api_key`、`base_url`；`temperature`、`extra_body`、`thinking`、`response_format` 可选。 |
+| `models[].thinking` | 是否请求思考。默认 `pro` 角色开启、`lite` 角色关闭。 |
+| `models[].response_format` | `tool`（默认）用强制具名工具调用来拿结构化输出；`json_schema` 使用网关原生的 `response_format`。 |
+| `roles.lite` | 轻量模型，用于插件命中复核。 |
+| `roles.pro` | 推理模型，用于行为分析。 |
+| `langsmith` | LangSmith 追踪配置（可选）。注意 eino 的 span 结构与 LangChain 不同，历史追踪记录无法互相对照。 |
 
 常用命令
 
 ```bash
-# 扫描指定 SKILL 目录
-uv run vetix scan --source xxx
+# 扫描一个 SKILL 目录
+./vetix -s xxx
 
-# 简写
-uv run vetix scan -s xxx
+# 打开 debug 日志
+./vetix -s xxx -d
 
-# 开启调试日志
-uv run vetix scan -s xxx --debug
+# finding 文本使用中文
+./vetix -s xxx -l zh
 
-# 使用中文输出
-uv run vetix scan -s xxx -l zh
+# 只在终端渲染，不落盘 JSON
+./vetix -s xxx -no-output
 
-# 仅在终端展示报告，不保存 JSON 文件
-uv run vetix scan -s xxx --no-output
+# 自定义输出目录与配置路径
+./vetix -s xxx -output-dir ./reports -c /etc/vetix/config.yaml
 
-# 自定义输出目录
-uv run vetix scan -s xxx --output-dir ./reports
-
-# 创建新插件
-uv run vetix create --plugin "my check"
+# 忽略缓存重新扫描
+./vetix -s xxx -force
 ```
+
+报告落在 `<output-dir>/<skill-hash-prefix>/report.json`。内容未变的 SKILL 第二次扫描会直接渲染缓存报告而不重跑流水线，加 `-force` 可强制重扫。
 
 ### Docker
 
@@ -125,35 +131,46 @@ uv run vetix create --plugin "my check"
 docker build -t vetix:latest .
 ```
 
-配置
+准备配置
 
 ```bash
 cp example.config.yaml config.yaml
-# 编辑 config.yaml：为两个模型填入真实的 api_key / base_url
+# 编辑 config.yaml，填入两个模型的真实 api_key / base_url
 ```
 
-运行扫描
+执行扫描
 
 ```bash
 docker run --rm \
-  -v "$PWD/config.yaml:/app/config.yaml:ro" \
+  -v "$PWD/config.yaml:/work/config.yaml:ro" \
   -v "$PWD/examples/skills/xxx:/skills/xxx:ro" \
-  -v "$PWD/output:/app/output" \
-  vetix:latest scan -s /skills/xxx
+  -v "$PWD/output:/work/output" \
+  vetix:latest -s /skills/xxx
 ```
 
 ### Docker Compose
 
 ```bash
-docker compose run --rm vetix scan -s /skills/xxx
+docker compose run --rm vetix -s /skills/xxx
+```
+
+## 新增插件
+
+插件位于 `internal/plugin/`。Go 二进制没有运行时发现机制——新增一个实现 `Plugin` 的文件，然后在 `internal/plugin/registry.go` 里注册：
+
+```go
+type MyCheckPlugin struct{}
+
+func (MyCheckPlugin) Scan(skillDir, filePath, content string) []Issue {
+    // 返回全部命中；把 AuditRequired 设为 true 的命中会走 LLM 复核。
+    return nil
+}
 ```
 
 ## Agent 追踪
 
-在 `config.yaml` 中配置 [LangSmith](https://smith.langchain.com/) 后，可以追踪每一次 Agent 运行——模型调用、工具调用和结构化输出全程可见。
+在 `config.yaml` 中配置 [LangSmith](https://smith.langchain.com/) 即可追踪每一次 Agent 运行——模型调用、工具调用与结构化输出都可见。
 
-![](./images/langsmith.png)
-
-## License
+## 许可证
 
 [MIT](LICENSE)

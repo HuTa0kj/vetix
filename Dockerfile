@@ -1,31 +1,33 @@
-# Vetix — one-shot SKILL security scanner
+# Vetix — one-shot SKILL security scanner.
 #
-# Layout note: vetix/config.py resolves config as `Path(__file__).parent.parent / "config.yaml"`.
-# With an editable install from /app, that resolves to /app/config.yaml, so we keep the
-# source-tree layout (copy source to /app, WORKDIR /app, run via `uv run vetix`) and do
-# NOT pip-install into site-packages (that would move the package and break config lookup).
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+# 单条静态二进制：提示词与 helper skill 通过 //go:embed 编进镜像，运行时只需要
+# config.yaml（挂载进来）和待扫描目录。
+FROM golang:1.25-bookworm AS build
 
-ENV UV_COMPILE_BYTECODE=1 \
-    UV_LINK_MODE=copy \
-    UV_NO_SYNC=1
+WORKDIR /src
 
-WORKDIR /app
+# eino 与 eino-ext 是独立模块，默认走 goproxy.cn；换环境时用 --build-arg 覆盖。
+ARG GOPROXY=https://goproxy.cn,direct
+ARG GOSUMDB=off
+ENV GOPROXY=${GOPROXY} GOSUMDB=${GOSUMDB} CGO_ENABLED=0
 
-# Build-backend inputs first: hatchling reads `readme = "README.md"` and the dynamic
-# version from vetix/__init__.py. uv.lock is gitignored (absent in a fresh clone), so
-# it is never copied; `uv sync` (not --frozen) regenerates it.
-COPY pyproject.toml README.md LICENSE ./
-COPY vetix/ ./vetix/
+COPY go.mod go.sum ./
+RUN go mod download
 
-# Template only — NOT the runtime config. The image deliberately ships no
-# /app/config.yaml so credentials can never be baked in; a scan fails fast
-# with FileNotFoundError if the user forgets to mount their config.
-COPY example.config.yaml ./
+COPY . .
+RUN go build -trimpath -ldflags="-s -w" -o /out/vetix ./cmd/vetix
 
-RUN uv sync
+FROM debian:bookworm-slim
 
-ENTRYPOINT ["uv", "run", "vetix"]
-# Safe default: prints usage and exits 0. Real scans always pass an explicit
-# `scan -s /skills/<name>` (args after the image name replace this CMD).
-CMD ["--help"]
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /out/vetix /usr/local/bin/vetix
+# 只带模板，绝不把凭据打进镜像；忘记挂载 config.yaml 时会直接报错退出。
+COPY example.config.yaml /work/example.config.yaml
+
+WORKDIR /work
+ENTRYPOINT ["vetix"]
+# 安全的默认行为：打印 usage 并以 0 退出。
+CMD ["-h"]

@@ -1,0 +1,127 @@
+package runner
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/projectdiscovery/goflags"
+	"github.com/projectdiscovery/gologger"
+	"github.com/projectdiscovery/gologger/levels"
+)
+
+type Options struct {
+	Source     string
+	Language   string
+	Output     bool
+	NoOutput   bool
+	OutputDir  string
+	Force      bool
+	Debug      bool
+	ConfigPath string
+}
+
+func ParseOptions() (*Options, error) {
+	options := &Options{}
+	flagSet := goflags.NewFlagSet()
+
+	flagSet.CreateGroup("input", "Input",
+		flagSet.StringVarP(&options.Source, "source", "s", "", "SKILL directory path"),
+	)
+
+	flagSet.CreateGroup("config", "Config",
+		flagSet.StringVarP(&options.ConfigPath, "config", "c", "./config.yaml", "Path to the YAML config file"),
+		flagSet.StringVarP(&options.Language, "language", "l", "en", "Output language for audit findings (en, zh)"),
+	)
+
+	flagSet.CreateGroup("output", "Output",
+		flagSet.BoolVarP(&options.Output, "output", "o", true, "Save the audit report to <output-dir>/<skill-hash-prefix>/report.json"),
+		flagSet.BoolVar(&options.NoOutput, "no-output", false, "Disable saving the audit report to a JSON file"),
+		flagSet.StringVar(&options.OutputDir, "output-dir", "./output", "Base directory for saved reports"),
+		flagSet.BoolVar(&options.Force, "force", false, "Ignore the cached report and force a full re-scan"),
+	)
+
+	flagSet.CreateGroup("debug", "Debug",
+		flagSet.BoolVarP(&options.Debug, "debug", "d", false, "Enable debug logging"),
+	)
+
+	// 不调用 flagSet.Parse()：它每次都会往 ~/.config/<tool>/config.yaml 写一份
+	// 自己的配置文件并做配置合并，与我们工作目录下的 config.yaml 语义冲突。
+	// 直接解析到导出的 CommandLine，保留 goflags 的 flag 类型与分组写法。
+	// 代价是 goflags 的 usageFunc 无法复用（未导出），因此 help 自行渲染。
+	flagSet.CommandLine.Usage = func() { usage(os.Stderr) }
+	if err := flagSet.CommandLine.Parse(os.Args[1:]); err != nil {
+		return nil, fmt.Errorf("Parse flags error: %v", err)
+	}
+
+	ShowBanner()
+
+	// gologger 默认 max level 是 Info(3)，而 Warning 是 4，条件为 level <= maxLevel，
+	// 所以不显式抬高的话所有 Warning 都会被丢掉——包括"复核结果没解析出来"这类
+	// 必须让人看见的降级提示。
+	maxLevel := levels.LevelWarning
+	if options.Debug {
+		maxLevel = levels.LevelDebug
+	}
+	gologger.DefaultLogger.SetMaxLevel(maxLevel)
+	gologger.DefaultLogger.SetTimestampWithFormat(true, levels.LevelFatal, "2006-01-02 15:04:05")
+
+	if err := options.validateOptions(); err != nil {
+		return nil, err
+	}
+
+	options.outputConfig()
+
+	return options, nil
+}
+
+func usage(w *os.File) {
+	fmt.Fprintf(w, "%s\n\nUsage:\n  vetix -s <skill-dir> [flags]\n\nFlags:\n", ToolDesc)
+	fmt.Fprint(w, `  INPUT
+    -s, -source string   SKILL directory path
+
+  CONFIG
+    -c, -config string   Path to the YAML config file (default "./config.yaml")
+    -l, -language string Output language for audit findings (en, zh) (default "en")
+
+  OUTPUT
+    -o, -output          Save the audit report to <output-dir>/<skill-hash-prefix>/report.json (default true)
+    -no-output           Disable saving the audit report to a JSON file
+    -output-dir string   Base directory for saved reports (default "./output")
+    -force               Ignore the cached report and force a full re-scan
+
+  DEBUG
+    -d, -debug           Enable debug logging
+`)
+}
+
+func (o *Options) validateOptions() error {
+	if o.Source == "" {
+		return fmt.Errorf("Source is required")
+	}
+	info, err := os.Stat(o.Source)
+	if err != nil {
+		return fmt.Errorf("Path not found: %s", o.Source)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("Not a directory: %s", o.Source)
+	}
+	if _, err := os.Stat(filepath.Join(o.Source, "SKILL.md")); err != nil {
+		return fmt.Errorf("No SKILL.md found in: %s", o.Source)
+	}
+	if o.Language != "en" && o.Language != "zh" {
+		gologger.Warning().Msgf("Unknown language %q, falling back to en", o.Language)
+		o.Language = "en"
+	}
+	return nil
+}
+
+func (o *Options) SaveReport() bool {
+	return o.Output && !o.NoOutput
+}
+
+func (o *Options) outputConfig() {
+	if o.Debug {
+		gologger.Info().Msgf("Debug mode enabled")
+	}
+}
