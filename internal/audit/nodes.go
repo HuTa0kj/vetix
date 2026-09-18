@@ -1,0 +1,108 @@
+package audit
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/projectdiscovery/gologger"
+
+	"vetix/internal/plugin"
+	"vetix/internal/pluginutils"
+)
+
+// GatherBaseInfo 收集 SKILL 的基本信息：名称、目录树（含每个文件的行数）、
+// 内容哈希，并判定是否只有一个 SKILL.md。
+func GatherBaseInfo(s *State) error {
+	name, err := skillName(s.SkillDir)
+	if err != nil {
+		return err
+	}
+	s.SkillName = name
+	gologger.Info().Msgf("Start scan SKILL: %s", name)
+
+	content, err := os.ReadFile(filepath.Join(s.SkillDir, "SKILL.md"))
+	if err != nil {
+		return fmt.Errorf("read SKILL.md: %w", err)
+	}
+	s.SkillContent = string(content)
+
+	tree, err := pluginutils.Tree(s.SkillDir)
+	if err != nil {
+		return fmt.Errorf("build skill tree: %w", err)
+	}
+	s.Tree = tree
+	top, files, dirs := pluginutils.TreeStats(tree)
+	s.Stats = TreeStats{TopLevel: top, Files: files, Dirs: dirs}
+
+	hash, err := pluginutils.DirectoryHash(s.SkillDir)
+	if err != nil {
+		return fmt.Errorf("compute directory hash: %w", err)
+	}
+	s.DirectoryHash = hash
+	gologger.Debug().Msgf("SKILL hash: %s, tree stats: top_level=%d files=%d dirs=%d",
+		hash, top, files, dirs)
+
+	s.SingleSkill = isSingleSkillFile(s.SkillDir)
+	if s.SingleSkill {
+		gologger.Info().Msg("Found 1 file in the SKILL directory")
+	} else {
+		gologger.Info().Msgf("Found %d files in the SKILL directory", s.Stats.Files)
+	}
+	return nil
+}
+
+// skillName 复刻 Python 的 _get_skill_name：取第一个含 SKILL.md 的目录的
+// basename。os.walk 是自顶向下的，所以正常情况下就是最外层目录。
+func skillName(dir string) (string, error) {
+	found := ""
+	err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+		if err != nil || found != "" {
+			return nil
+		}
+		if !d.IsDir() {
+			return nil
+		}
+		if _, serr := os.Stat(filepath.Join(p, "SKILL.md")); serr == nil {
+			found = filepath.Base(p)
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	if found == "" {
+		return "", fmt.Errorf("SKILL.md not found")
+	}
+	return found, nil
+}
+
+// isSingleSkillFile 用 os.listdir 的等价语义：目录下只有 SKILL.md 一个条目。
+// 注意隐藏文件也计入，所以 SKILL.md + .DS_Store 会被判为多文件目录——
+// 这与 Python 版一致，不"顺手修掉"，否则单文件快速路径的触发条件会变。
+func isSingleSkillFile(dir string) bool {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	if len(entries) != 1 {
+		return false
+	}
+	return entries[0].Name() == "SKILL.md"
+}
+
+// PluginCheck 对所有文件跑插件。插件级异常在 plugin 包内被隔离成警告。
+func PluginCheck(s *State) error {
+	issues, err := plugin.ScanDirectory(s.SkillDir)
+	if err != nil {
+		return err
+	}
+	s.PluginsCheckFindings = issues
+
+	total := 0
+	for _, list := range issues {
+		total += len(list)
+	}
+	gologger.Info().Msgf("Plugin check revealed %d security risks", total)
+	return nil
+}

@@ -1,0 +1,115 @@
+package plugin
+
+import (
+	"fmt"
+	"strings"
+
+	"vetix/internal/pluginutils"
+)
+
+type LargeFileCheckPlugin struct{}
+
+const largeFileMaxBytes = 2 * 1024 * 1024
+
+func (LargeFileCheckPlugin) Scan(skillDir, filePath, content string) []Issue {
+	// 用解码后的字节数而不是磁盘原始大小：Python 以 errors="replace" 读文本，
+	// 非法字节会变成三字节的 U+FFFD，长度与原始文件不同。
+	size := len(content)
+	if size <= largeFileMaxBytes {
+		return nil
+	}
+	return []Issue{{
+		Name:     "Large SKILL file found",
+		Severity: SeverityMedium,
+		Category: CatObfuscation,
+		Description: fmt.Sprintf("SKILL file size %s exceeds limit of %s.",
+			pluginutils.HumanBytes(size), pluginutils.HumanBytes(largeFileMaxBytes)),
+		FilePath:      relativePath(filePath, skillDir),
+		AuditRequired: false,
+	}}
+}
+
+type LongFileCheckPlugin struct{}
+
+const longFileMaxLines = 3000
+
+func (LongFileCheckPlugin) Scan(skillDir, filePath, content string) []Issue {
+	lines := len(pluginutils.SplitLines(content))
+	if lines <= longFileMaxLines {
+		return nil
+	}
+	return []Issue{{
+		Name:     "Extremely long file",
+		Severity: SeverityMedium,
+		Category: CatObfuscation,
+		Description: fmt.Sprintf(
+			"An excessively long file, totaling %d lines, was found in the SKILL directory.", lines),
+		FilePath:      relativePath(filePath, skillDir),
+		AuditRequired: false,
+	}}
+}
+
+type BinaryFileCheckPlugin struct{}
+
+func (BinaryFileCheckPlugin) Scan(skillDir, filePath, content string) []Issue {
+	if !pluginutils.IsBinaryFile(filePath) {
+		return nil
+	}
+	return []Issue{{
+		Name:          "Binary file",
+		Severity:      SeverityHigh,
+		Category:      CatObfuscation,
+		Description:   "Suspicious binary files were found in the SKILL directory.",
+		FilePath:      relativePath(filePath, skillDir),
+		AuditRequired: false,
+	}}
+}
+
+type ConsecutiveNewlinesCheckPlugin struct{}
+
+func (ConsecutiveNewlinesCheckPlugin) Scan(skillDir, filePath, content string) []Issue {
+	if !strings.Contains(content, strings.Repeat("\n", 30)) {
+		return nil
+	}
+	return []Issue{{
+		Name:     "Large number of consecutive line breaks",
+		Severity: SeverityHigh,
+		Category: CatObfuscation,
+		Description: "The file contains a large number of consecutive newline characters, " +
+			"which may indicate the presence of malicious commands behind the newlines.",
+		FilePath:      relativePath(filePath, skillDir),
+		AuditRequired: false,
+	}}
+}
+
+type ExceptionalFileCheckPlugin struct{}
+
+func (ExceptionalFileCheckPlugin) Scan(skillDir, filePath, content string) []Issue {
+	if !pluginutils.ExistNonText([]byte(content)) {
+		return nil
+	}
+	return []Issue{{
+		Name:          "Exceptional file",
+		Severity:      SeverityMedium,
+		Category:      CatObfuscation,
+		Description:   "A large number of abnormal characters were found in a file that should have been readable.",
+		FilePath:      relativePath(filePath, skillDir),
+		AuditRequired: false,
+	}}
+}
+
+type RareFileCheckPlugin struct{}
+
+func (RareFileCheckPlugin) Scan(skillDir, filePath, content string) []Issue {
+	if !pluginutils.IsRiskFile(filePath) {
+		return nil
+	}
+	return []Issue{{
+		Name:          "Rare file",
+		Severity:      SeverityMedium,
+		Category:      CatObfuscation,
+		Description:   "The SKILL directory contains rare auxiliary files that may pose a security risk.",
+		FilePath:      relativePath(filePath, skillDir),
+		AuditRequired: false,
+	}}
+}
