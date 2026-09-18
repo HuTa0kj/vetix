@@ -50,7 +50,7 @@ cd vetix
 go build -o vetix ./cmd/vetix
 ```
 
-Prompts and the helper skill are embedded into the binary, so the executable is self-contained. `./build.sh` produces release binaries for macOS, Linux, and Windows.
+Prompts and the helper skill are embedded into the binary, so the executable is self-contained. For another platform, set `GOOS`/`GOARCH` — e.g. `GOOS=linux GOARCH=amd64 go build -o vetix-linux ./cmd/vetix`.
 
 Copy the example config and fill in your model credentials:
 

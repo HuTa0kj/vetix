@@ -50,7 +50,7 @@ cd vetix
 go build -o vetix ./cmd/vetix
 ```
 
-提示词与 helper skill 通过 `//go:embed` 编进二进制，可执行文件自包含。`./build.sh` 可一次产出 macOS、Linux、Windows 的发布二进制。
+提示词与 helper skill 通过 `//go:embed` 编进二进制，可执行文件自包含。需要其他平台的产物时设置 `GOOS`/`GOARCH` 即可，例如 `GOOS=linux GOARCH=amd64 go build -o vetix-linux ./cmd/vetix`。
 
 复制配置模板并填入模型凭据：
 
