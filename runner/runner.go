@@ -103,6 +103,9 @@ func (r *Runner) Run() error {
 	if traceCtx != nil {
 		runCtx = traceCtx(runCtx)
 	}
+	// 追踪开启后，每个 span 的记录都会被回调打到 stdout，这里拦掉。
+	restore := installRuninfoFilter()
+	defer restore()
 
 	if _, err := workflow.Invoke(runCtx, map[string]any{}); err != nil {
 		return err
