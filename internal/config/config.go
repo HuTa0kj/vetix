@@ -8,12 +8,13 @@ import (
 )
 
 type Model struct {
-	ID          string         `yaml:"id"`
-	Name        string         `yaml:"name"`
-	APIKey      string         `yaml:"api_key"`
-	BaseURL     string         `yaml:"base_url"`
-	Temperature *float32       `yaml:"temperature"`
-	ExtraBody   map[string]any `yaml:"extra_body"`
+	ID          string            `yaml:"id"`
+	Name        string            `yaml:"name"`
+	APIKey      string            `yaml:"api_key"`
+	BaseURL     string            `yaml:"base_url"`
+	ExtraBody   map[string]any    `yaml:"extra_body"`
+	ExtraHeader map[string]string `yaml:"extra_headers"`
+	Temperature *float32          `yaml:"temperature"`
 	// Thinking 控制是否在请求体里注入 {"thinking": {"type": "enabled"}}。
 	// Python 版因为流程简单，两个角色都固定关闭思考。Go 版按角色给默认值：
 	// 行为分析（pro）开启、命中验证（lite）关闭——思考会显著抬高 token 与

@@ -55,10 +55,13 @@ func (f *Factory) Role(ctx context.Context, role string) (*openai.ChatModel, *co
 		BaseURL:     m.BaseURL,
 		Model:       m.ID,
 		ExtraFields: extra,
-		// 网关把 base_url 写错（最常见的是漏了 /v1）时会返回 HTML 页面而不是 JSON，
-		// 底层 SDK 只会报 "invalid character '<' looking for beginning of value"，
-		// 完全看不出是哪个地址错了。这里在传输层拦一道，把可执行的提示带上。
-		HTTPClient: &http.Client{Timeout: 5 * time.Minute, Transport: jsonOnlyTransport{}},
+		HTTPClient: &http.Client{
+			Timeout: 5 * time.Minute,
+			// extra_headers 在传输层注入：eino 只有 per-call 的
+			// model.WithExtraHeader，而 agent 内部的模型调用由框架发起，
+			// 拿不到注入点；放这一层对快速路径和 agent 路径一并生效。
+			Transport: &apiTransport{headers: m.ExtraHeader},
+		},
 	}
 	if m.Temperature != nil {
 		cc.Temperature = m.Temperature
@@ -71,9 +74,21 @@ func (f *Factory) Role(ctx context.Context, role string) (*openai.ChatModel, *co
 	return cm, m, nil
 }
 
-type jsonOnlyTransport struct{}
+// apiTransport 注入配置里的额外请求头，并拦截"网关返回非 JSON"这一类错误。
+type apiTransport struct {
+	headers map[string]string
+}
 
-func (jsonOnlyTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (t *apiTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if len(t.headers) > 0 {
+		// RoundTripper 不应修改传入的请求，先克隆再改头。
+		clone := req.Clone(req.Context())
+		for k, v := range t.headers {
+			clone.Header.Set(k, v)
+		}
+		req = clone
+	}
+
 	resp, err := http.DefaultTransport.RoundTrip(req)
 	if err != nil {
 		return nil, err
@@ -81,9 +96,12 @@ func (jsonOnlyTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if !isJSONish(resp.Header.Get("Content-Type")) {
 		ct := resp.Header.Get("Content-Type")
 		resp.Body.Close()
+		// base_url 写错（最常见的是漏了 /v1）时网关会返回 HTML 页面，底层 SDK
+		// 只会报 "invalid character '<' looking for beginning of value"，看不出
+		// 是哪个地址错了。
 		return nil, fmt.Errorf(
-			"POST %s returned %q instead of JSON — check that base_url points at the API root "+
-				"(most OpenAI-compatible gateways need the /v1 suffix)", req.URL, ct)
+			"%s %s returned %q instead of JSON — check that base_url points at the API root "+
+				"(most OpenAI-compatible gateways need the /v1 suffix)", req.Method, req.URL, ct)
 	}
 	return resp, nil
 }

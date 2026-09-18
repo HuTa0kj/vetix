@@ -68,6 +68,7 @@ models:
     base_url: "https://example.com/v1"
     temperature: 0.7
     extra_body: {}
+    extra_headers: {}       # appended to every request (fast path and agent calls alike)
     thinking: true          # inject {"thinking": {"type": "enabled"}} into the request body
 
   - id: deepseek-v4-flash
@@ -92,7 +93,8 @@ langsmith:
 
 | Field | Description |
 |-------|-------------|
-| `models` | Available LLMs. Each entry requires `id`, `api_key`, `base_url`; `temperature`, `extra_body`, `thinking` and `response_format` are optional. |
+| `models` | Available LLMs. Each entry requires `id`, `api_key`, `base_url`; `temperature`, `extra_body`, `extra_headers`, `thinking` and `response_format` are optional. `base_url` must point at the API root — most gateways need the `/v1` suffix, otherwise they serve a web page instead of JSON. |
+| `models[].extra_headers` | Extra HTTP headers sent with every request, e.g. gateway routing keys. Applied at the transport layer, so agent-internal model calls get them too. |
 | `models[].thinking` | Whether to request reasoning. Defaults to on for the `pro` role and off for `lite`. |
 | `models[].response_format` | `tool` (default) forces a named tool call for structured output; `json_schema` uses the gateway's native `response_format`. |
 | `roles.lite` | Fast model, for plugin-hit verification. |
