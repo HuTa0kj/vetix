@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"net/http"
+	"strings"
+	"time"
 
 	"github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/adk"
@@ -52,6 +55,10 @@ func (f *Factory) Role(ctx context.Context, role string) (*openai.ChatModel, *co
 		BaseURL:     m.BaseURL,
 		Model:       m.ID,
 		ExtraFields: extra,
+		// 网关把 base_url 写错（最常见的是漏了 /v1）时会返回 HTML 页面而不是 JSON，
+		// 底层 SDK 只会报 "invalid character '<' looking for beginning of value"，
+		// 完全看不出是哪个地址错了。这里在传输层拦一道，把可执行的提示带上。
+		HTTPClient: &http.Client{Timeout: 5 * time.Minute, Transport: jsonOnlyTransport{}},
 	}
 	if m.Temperature != nil {
 		cc.Temperature = m.Temperature
@@ -62,6 +69,32 @@ func (f *Factory) Role(ctx context.Context, role string) (*openai.ChatModel, *co
 	}
 	f.cache[role] = cm
 	return cm, m, nil
+}
+
+type jsonOnlyTransport struct{}
+
+func (jsonOnlyTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := http.DefaultTransport.RoundTrip(req)
+	if err != nil {
+		return nil, err
+	}
+	if !isJSONish(resp.Header.Get("Content-Type")) {
+		ct := resp.Header.Get("Content-Type")
+		resp.Body.Close()
+		return nil, fmt.Errorf(
+			"POST %s returned %q instead of JSON — check that base_url points at the API root "+
+				"(most OpenAI-compatible gateways need the /v1 suffix)", req.URL, ct)
+	}
+	return resp, nil
+}
+
+// isJSONish 放行 JSON 与 SSE。流式响应是 text/event-stream，不能当成错误。
+func isJSONish(contentType string) bool {
+	ct := strings.ToLower(contentType)
+	if ct == "" {
+		return true
+	}
+	return strings.Contains(ct, "json") || strings.Contains(ct, "event-stream")
 }
 
 // AgentOptions 描述一次 agent 构造所需的全部输入。
