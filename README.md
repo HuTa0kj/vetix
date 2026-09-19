@@ -4,6 +4,9 @@ An LLM-agent-based scanner for [SKILL](https://docs.claude.com/en/docs/claude-co
 
 [中文文档](./README_CN.md)
 
+> [!WARNING]
+> The [`examples/`](./examples) directory contains sample SKILLs for testing purposes, including deliberately crafted malicious samples. Do not install or load these SKILLs outside of a scanning test environment.
+
 ## Features
 
 - **Plugin-based static scanning** — rules catch deterministic security risks.
@@ -49,8 +52,6 @@ git clone git@github.com:HuTa0kj/vetix.git
 cd vetix
 go build -o vetix ./cmd/vetix
 ```
-
-Prompts and the helper skill are embedded into the binary, so the executable is self-contained. For another platform, set `GOOS`/`GOARCH` — e.g. `GOOS=linux GOARCH=amd64 go build -o vetix-linux ./cmd/vetix`.
 
 Copy the example config and fill in your model credentials:
 
@@ -156,9 +157,25 @@ docker run --rm \
 docker compose run --rm vetix -s /skills/xxx
 ```
 
+## Built-in Plugins
+
+Nine deterministic rules are compiled into the binary. Every plugin runs against every file in the SKILL directory; hits marked **LLM-verified** are re-judged against the real file content by the verification pass before reaching the report, the rest go straight into it.
+
+| Plugin | Detects | Default severity | LLM-verified |
+|---|---|---|---|
+| `base64_exec` | A Base64-decoded command piped into a shell | critical | yes |
+| `reverse_shell` | Reverse-shell patterns — `/dev/tcp`, `nc -e`, `socat exec:` | critical | yes |
+| `binary_file` | Binary files inside the SKILL directory | high | no |
+| `consecutive_newlines` | Runs of 30+ consecutive newlines hiding content | high | no |
+| `exceptional_file` | Text files full of non-printable characters | medium | no |
+| `large_file` | Single files over 2 MB | medium | no |
+| `long_file` | Single files over 3000 lines | medium | no |
+| `public_ip` | Hard-coded public IPv4 addresses | medium | yes |
+| `rare_file` | Files whose extension is outside the text whitelist | medium | no |
+
 ## Adding a Plugin
 
-Plugins live in `internal/plugin/`. The Go binary has no runtime discovery — add a file implementing `Plugin`, then register it in `internal/plugin/registry.go`:
+Plugins are located in `internal/plugin/`. When adding a new file that implements `Plugin`, you need to register it in `internal/plugin/registry.go`:
 
 ```go
 type MyCheckPlugin struct{}

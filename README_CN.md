@@ -4,6 +4,9 @@
 
 [English](./README.md)
 
+> [!WARNING]
+> [`examples/`](./examples) 目录下为用于测试的示例 SKILL，其中包含刻意构造的恶意样本。请勿在扫描测试环境之外安装或加载这些 SKILL。
+
 ## 功能特性
 
 - **基于插件的静态扫描** —— 通过规则识别确定性安全风险。
@@ -49,8 +52,6 @@ git clone git@github.com:HuTa0kj/vetix.git
 cd vetix
 go build -o vetix ./cmd/vetix
 ```
-
-提示词与 helper skill 通过 `//go:embed` 编进二进制，可执行文件自包含。需要其他平台的产物时设置 `GOOS`/`GOARCH` 即可，例如 `GOOS=linux GOARCH=amd64 go build -o vetix-linux ./cmd/vetix`。
 
 复制配置模板并填入模型凭据：
 
@@ -156,9 +157,25 @@ docker run --rm \
 docker compose run --rm vetix -s /skills/xxx
 ```
 
+## 内置插件
+
+每个插件对 SKILL 目录里的每个文件运行；标记为「LLM 复核」的命中会先由复核阶段结合真实文件内容再次判断，其余直接进入报告。
+
+| 插件 | 检测内容 | 默认严重度 | LLM 复核 |
+|---|---|---|---|
+| `base64_exec` | Base64 解码后经管道送入 Shell 的命令 | critical | 是 |
+| `reverse_shell` | 反弹 Shell 特征——`/dev/tcp`、`nc -e`、`socat exec:` | critical | 是 |
+| `binary_file` | SKILL 目录中的二进制文件 | high | 否 |
+| `consecutive_newlines` | 30 个以上连续换行隐藏内容 | high | 否 |
+| `exceptional_file` | 本应是文本的文件里混入大量不可打印字符 | medium | 否 |
+| `large_file` | 单文件超过 2 MB | medium | 否 |
+| `long_file` | 单文件超过 3000 行 | medium | 否 |
+| `public_ip` | 硬编码的公网 IPv4 地址 | medium | 是 |
+| `rare_file` | 扩展名不在文本白名单内的罕见文件 | medium | 否 |
+
 ## 新增插件
 
-插件位于 `internal/plugin/`。Go 二进制没有运行时发现机制——新增一个实现 `Plugin` 的文件，然后在 `internal/plugin/registry.go` 里注册：
+插件位于 `internal/plugin/`。新增一个实现 `Plugin` 的文件，需要在 `internal/plugin/registry.go` 里注册：
 
 ```go
 type MyCheckPlugin struct{}
