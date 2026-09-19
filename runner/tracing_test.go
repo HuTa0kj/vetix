@@ -55,7 +55,8 @@ func TestRegisterTracingDisabled(t *testing.T) {
 			APIKey: "k", Tracing: &off,
 		}},
 	} {
-		if got := registerTracing(cfg, newTaskID()); got != nil {
+		handler, traceCtx := registerTracing(cfg, newTaskID())
+		if handler != nil || traceCtx != nil {
 			t.Errorf("%s: tracing must stay off", name)
 		}
 	}
@@ -68,8 +69,8 @@ func TestRegisterTracingProject(t *testing.T) {
 		Tracing: &on,
 		Project: "vetix",
 	}}
-	traceCtx := registerTracing(cfg, newTaskID())
-	if traceCtx == nil {
+	handler, traceCtx := registerTracing(cfg, newTaskID())
+	if handler == nil || traceCtx == nil {
 		t.Fatal("tracing must be enabled")
 	}
 	if traceCtx(context.Background()) == nil {

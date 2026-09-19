@@ -342,19 +342,8 @@ func metaLine(category, file string, line int) string {
 
 // summaryLine 汇总两个来源的严重度分布：「4 findings · 2 critical · 1 high」。
 func summaryLine(s *audit.State) string {
-	counts := map[string]int{}
-	total := 0
-	for _, f := range s.PluginsVerifyFindings {
-		counts[strings.ToLower(f.Severity)]++
-		total++
-	}
-	for _, f := range s.LLMFindings {
-		if f == nil {
-			continue
-		}
-		counts[strings.ToLower(f.Severity)]++
-		total++
-	}
+	counts := SeverityCounts(s)
+	total := len(s.PluginsVerifyFindings) + behavioralCount(s)
 	if total == 0 {
 		return ""
 	}
@@ -362,13 +351,19 @@ func summaryLine(s *audit.State) string {
 	if total == 1 {
 		label = "finding"
 	}
-	parts := []string{fmt.Sprintf("%d %s", total, label)}
+	parts := append([]string{fmt.Sprintf("%d %s", total, label)}, severityParts(counts)...)
+	return "  " + strings.Join(parts, text.FgHiBlack.Sprint(" · "))
+}
+
+// severityParts 返回按等级细分的彩色计数段，零计数不出现。
+func severityParts(counts map[string]int) []string {
+	var parts []string
 	for _, sev := range []string{"critical", "high", "medium", "low", "info"} {
 		if n := counts[sev]; n > 0 {
 			parts = append(parts, text.Colors{sevColor(sev)}.Sprint(fmt.Sprintf("%d %s", n, sev)))
 		}
 	}
-	return "  " + strings.Join(parts, text.FgHiBlack.Sprint(" · "))
+	return parts
 }
 
 func behavioralCount(s *audit.State) int {
@@ -414,4 +409,31 @@ func wrapIndent(s string, width, indent int) []string {
 // Counts 供调用方打印摘要日志。
 func Counts(s *audit.State) (int, int) {
 	return len(s.PluginsVerifyFindings), len(s.LLMFindings)
+}
+
+// Sanitize 是 sanitize 的导出口径：批量扫描汇总里要打印的 skill 名来自被扫描
+// 目录，与报告正文同属攻击者可控文本，出报告包的终端输出都必须过它。
+func Sanitize(s string) string {
+	return sanitize(s)
+}
+
+// SeverityCounts 统计两个来源合并后的按等级发现数，键即 severity 字段小写。
+func SeverityCounts(s *audit.State) map[string]int {
+	counts := map[string]int{}
+	for _, f := range s.PluginsVerifyFindings {
+		counts[strings.ToLower(f.Severity)]++
+	}
+	for _, f := range s.LLMFindings {
+		if f != nil {
+			counts[strings.ToLower(f.Severity)]++
+		}
+	}
+	return counts
+}
+
+// SeverityBreakdown 把按等级计数渲染成「2 critical · 1 high」的彩色串，零计数
+// 不出现；全零时返回空串。空串的判定交给调用方（如渲染成 Clean）。
+func SeverityBreakdown(counts map[string]int) string {
+	sep := text.FgHiBlack.Sprint(" · ")
+	return strings.Join(severityParts(counts), sep)
 }

@@ -43,16 +43,18 @@ func newUUID() string {
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
 }
 
-// registerTracing 挂上 LangSmith 回调，返回给 run context 打标记的函数；未启用时
-// 返回 nil。返回值必须作用到 workflow 的 ctx 上，否则 project 不生效——handler 从
-// ctx 读 session name，读不到就留空，run 会被 LangSmith 归到 "default" 项目。
-func registerTracing(cfg *config.Config, taskID string) func(context.Context) context.Context {
+// registerTracing 挂上 LangSmith 回调，返回 handler 本体与给 run context 打标记
+// 的函数；未启用时返回 (nil, nil)。handler 由调用方在每次 Invoke 时用
+// compose.WithCallbacks 注入，不再走 AppendGlobalHandlers 的全局注册——批量扫描
+// 逐个 skill 走到这里，全局注册只会累积，第 N 个 skill 起，每条 span 会被重复
+// 记录 N 次；按次注入则 handler 只作用于自己那一轮。
+func registerTracing(cfg *config.Config, taskID string) (callbacks.Handler, func(context.Context) context.Context) {
 	ls := cfg.LangSmith
 	if ls == nil || ls.APIKey == "" {
-		return nil
+		return nil, nil
 	}
 	if ls.Tracing != nil && !*ls.Tracing {
-		return nil
+		return nil, nil
 	}
 
 	handler, err := einolangsmith.NewLangsmithHandler(&einolangsmith.Config{
@@ -62,9 +64,8 @@ func registerTracing(cfg *config.Config, taskID string) func(context.Context) co
 	})
 	if err != nil {
 		gologger.Warning().Msgf("LangSmith tracing disabled: %v", err)
-		return nil
+		return nil, nil
 	}
-	callbacks.AppendGlobalHandlers(handler)
 
 	endpoint := ls.Endpoint
 	if endpoint == "" {
@@ -77,7 +78,7 @@ func registerTracing(cfg *config.Config, taskID string) func(context.Context) co
 	// endpoint 写错不会让扫描失败，只在每个 span 上静默报错，所以打印生效值。
 	gologger.Info().Msgf("LangSmith tracing enabled: endpoint=%s project=%s", endpoint, project)
 
-	return func(ctx context.Context) context.Context {
+	return handler, func(ctx context.Context) context.Context {
 		return einolangsmith.SetTrace(ctx, einolangsmith.WithSessionName(ls.Project))
 	}
 }

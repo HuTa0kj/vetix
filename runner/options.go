@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/jedib0t/go-pretty/v6/text"
@@ -18,6 +17,7 @@ import (
 
 type Options struct {
 	Source      string
+	Preset      string
 	Language    string
 	Output      bool
 	NoOutput    bool
@@ -33,7 +33,8 @@ func ParseOptions() (*Options, error) {
 	flagSet := goflags.NewFlagSet()
 
 	flagSet.CreateGroup("input", "Input",
-		flagSet.StringVarP(&options.Source, "source", "s", "", "SKILL directory path"),
+		flagSet.StringVarP(&options.Source, "source", "s", "", "SKILL directory path or a skills parent directory"),
+		flagSet.StringVarP(&options.Preset, "preset", "p", "", "Scan all skills under a preset agent skills root (claude-code, codex)"),
 	)
 
 	flagSet.CreateGroup("config", "Config",
@@ -93,9 +94,10 @@ func ParseOptions() (*Options, error) {
 }
 
 func usage(w *os.File) {
-	fmt.Fprintf(w, "%s\n\nUsage:\n  vetix -s <skill-dir> [flags]\n\nFlags:\n", ToolDesc)
+	fmt.Fprintf(w, "%s\n\nUsage:\n  vetix -s <skill-dir> | -p <preset> [flags]\n\nFlags:\n", ToolDesc)
 	fmt.Fprint(w, `  INPUT
-    -s, -source string   SKILL directory path
+    -s, -source string   SKILL directory path or a skills parent directory
+    -p, -preset string   Scan all skills under a preset agent skills root (claude-code, codex)
 
   CONFIG
     -c, -config string   Path to the YAML config file (default "./config.yaml")
@@ -144,18 +146,29 @@ func printPlugins(w io.Writer) {
 }
 
 func (o *Options) validateOptions() error {
-	if o.Source == "" {
-		return fmt.Errorf("Source is required")
+	if o.Source != "" && o.Preset != "" {
+		return fmt.Errorf("-source and -preset are mutually exclusive")
 	}
-	info, err := os.Stat(o.Source)
-	if err != nil {
-		return fmt.Errorf("Path not found: %s", o.Source)
+	if o.Source == "" && o.Preset == "" {
+		return fmt.Errorf("Source or preset is required")
 	}
-	if !info.IsDir() {
-		return fmt.Errorf("Not a directory: %s", o.Source)
+	// 预设在这里只解析名字：根目录本身不该被要求直接含 SKILL.md，有没有可扫的
+	// skill 由 Run 阶段的 FindSkills 枚举时判定。
+	if o.Preset != "" {
+		if _, err := resolvePreset(o.Preset); err != nil {
+			return err
+		}
 	}
-	if _, err := os.Stat(filepath.Join(o.Source, "SKILL.md")); err != nil {
-		return fmt.Errorf("No SKILL.md found in: %s", o.Source)
+	if o.Source != "" {
+		info, err := os.Stat(o.Source)
+		if err != nil {
+			return fmt.Errorf("Path not found: %s", o.Source)
+		}
+		if !info.IsDir() {
+			return fmt.Errorf("Not a directory: %s", o.Source)
+		}
+		// 这里不要求 SKILL.md：单 skill 还是父目录批量由 Run 阶段按目录形态
+		// 判定，指到父目录上是合法用法。
 	}
 	if o.Language != "en" && o.Language != "zh" {
 		gologger.Warning().Msgf("Unknown language %q, falling back to en", o.Language)
