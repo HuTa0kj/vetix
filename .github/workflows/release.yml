@@ -1,12 +1,12 @@
 name: Release
 
-# 在 GitHub 页面上 Publish release 时触发；更新说明在页面的描述框里写。
+# 在 GitHub 页面上 Publish release 时触发
 on:
   release:
     types: [published]
 
 permissions:
-  contents: write # 允许把编译产物追加到已发布的 Release 上
+  contents: write
 
 jobs:
   build:
@@ -27,9 +27,9 @@ jobs:
             goarch: amd64
             name: windows-amd64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
@@ -41,7 +41,19 @@ jobs:
             go build -ldflags="-s -w -X vetix/internal/buildinfo.Version=${{ github.event.release.tag_name }}" \
             -o "$OUT" ./cmd/vetix
 
+      # 打包压缩
+      - name: Pack
+        run: |
+          BIN=vetix-${{ matrix.name }}
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            zip -q "vetix-${{ matrix.name }}.zip" "$BIN.exe"
+          else
+            tar -czf "vetix-${{ matrix.name }}.tar.gz" "$BIN"
+          fi
+
       - name: Upload to Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
-          files: vetix-*
+          files: |
+            vetix-*.tar.gz
+            vetix-*.zip
