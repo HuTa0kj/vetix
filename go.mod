@@ -3,6 +3,7 @@ module vetix
 go 1.25.11
 
 require (
+	github.com/RealAlexandreAI/json-repair v0.0.18
 	github.com/cloudwego/eino v0.9.19
 	github.com/cloudwego/eino-ext/callbacks/langsmith v0.0.0-20260916065400-2607f61e807f
 	github.com/cloudwego/eino-ext/components/model/openai v0.1.13
