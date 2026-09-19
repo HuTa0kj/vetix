@@ -15,15 +15,16 @@ An LLM-agent-based scanner for [SKILL](https://docs.claude.com/en/docs/claude-co
 - **Defense-in-depth sandbox** — the agent reads only inside the skill, symlinks are refused, every write is rejected at the backend, and mutating tools are hidden from the model.
 - **LangSmith tracing** — every agent run is observable end-to-end.
 
-## Common commands
+## Parameter
 
 ```bash
 Usage:
-  vetix -s <skill-dir> [flags]
+  vetix -s <skill-dir> | -p <preset> [flags]
 
 Flags:
   INPUT
-    -s, -source string   SKILL directory path
+    -s, -source string   SKILL directory path or a skills parent directory
+    -p, -preset string   Scan all skills under a preset agent skills root (claude-code, codex)
 
   CONFIG
     -c, -config string   Path to the YAML config file (default "./config.yaml")
@@ -40,6 +41,22 @@ Flags:
 
   PLUGIN
     -pl, -plugins-list   List built-in plugins with their names and descriptions
+```
+
+## Common commands
+
+```bash
+# Scan a single SKILL; requires a SKILL.md file in the directory
+vetix -s ./examples/malicious/wacli-1sk
+
+# Scan the entire SKILL directory; requires a SKILL.md file in the immediate subdirectories
+vetix -s ~/.claude/skills
+
+# Scan using the preset path
+vetix -p claude-code
+
+# View the list of plugins
+vetix -pl
 ```
 
 ## Detection Categories
@@ -128,8 +145,6 @@ langsmith:
 | `roles.lite` | Fast model, for plugin-hit verification. |
 | `roles.pro` | Reasoning model, for behavioral analysis. |
 | `langsmith` | LangSmith tracing config (optional) |
-
-### 
 
 ### Docker
 

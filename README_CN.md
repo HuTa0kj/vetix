@@ -15,15 +15,16 @@
 - **纵深防御沙箱** —— Agent 只能读到 SKILL 自身目录，符号链接一律拒绝，写入在后端层被整体拒绝，写类工具也不出现在模型可见的工具列表里。
 - **LangSmith 追踪** —— 端到端可观测每一次 Agent 运行。
 
-## 常用命令
+## 参数
 
-```bash
+```
 Usage:
-  vetix -s <skill-dir> [flags]
+  vetix -s <skill-dir> | -p <preset> [flags]
 
 Flags:
   INPUT
-    -s, -source string   SKILL directory path
+    -s, -source string   SKILL directory path or a skills parent directory
+    -p, -preset string   Scan all skills under a preset agent skills root (claude-code, codex)
 
   CONFIG
     -c, -config string   Path to the YAML config file (default "./config.yaml")
@@ -40,6 +41,22 @@ Flags:
 
   PLUGIN
     -pl, -plugins-list   List built-in plugins with their names and descriptions
+```
+
+## 常用命令
+
+```bash
+# 检测单个 SKILL，目录下需要有 SKILL.md
+vetix -s ./examples/malicious/wacli-1sk
+
+# 扫描整个 SKILL 目录，直接子目录下需要有 SKILL.md
+vetix -s ~/.claude/skills
+
+# 使用预设路径扫描
+vetix -p claude-code
+
+# 查看插件列表
+vetix -pl
 ```
 
 ## 检测分类
