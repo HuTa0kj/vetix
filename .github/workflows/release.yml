@@ -1,0 +1,47 @@
+name: Release
+
+# 在 GitHub 页面上 Publish release 时触发；更新说明在页面的描述框里写。
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write # 允许把编译产物追加到已发布的 Release 上
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: darwin
+            goarch: amd64
+            name: mac-amd64
+          - goos: darwin
+            goarch: arm64
+            name: mac-arm64
+          - goos: linux
+            goarch: amd64
+            name: linux-amd64
+          - goos: windows
+            goarch: amd64
+            name: windows-amd64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: |
+          OUT=vetix-${{ matrix.name }}
+          if [ "${{ matrix.goos }}" = "windows" ]; then OUT="$OUT.exe"; fi
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+            go build -ldflags="-s -w -X vetix/internal/buildinfo.Version=${{ github.event.release.tag_name }}" \
+            -o "$OUT" ./cmd/vetix
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: vetix-*
