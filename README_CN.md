@@ -181,7 +181,17 @@ docker compose run --rm vetix -s /skills/xxx
 插件位于 `internal/plugin/`。新增一个实现 `Plugin` 的文件，需要在 `internal/plugin/registry.go` 里注册：
 
 ```go
+package plugin
+
 type MyCheckPlugin struct{}
+
+func (MyCheckPlugin) Meta() Meta {
+    return Meta{
+        ID:          "my_check",
+        Name:        "My Check",
+        Description: "一句话说明这条规则检测什么。",
+    }
+}
 
 func (MyCheckPlugin) Scan(skillDir, filePath, content string) []Issue {
     // 返回全部命中；把 AuditRequired 设为 true 的命中会走 LLM 复核。

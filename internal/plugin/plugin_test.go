@@ -140,7 +140,7 @@ func TestScanDirectoryIsolatesPluginFailures(t *testing.T) {
 	// 一个插件 panic 不能中断整轮扫描；ScanDirectory 会把它转成一条警告。
 	panicky := panickyPlugin{}
 	old := registry
-	registry = []named{{name: "panicky", p: panicky}, {name: "reverse_shell", p: ReverseShellPlugin{}}}
+	registry = []Plugin{panicky, ReverseShellPlugin{}}
 	defer func() { registry = old }()
 
 	dir := t.TempDir()
@@ -166,6 +166,10 @@ func TestScanDirectoryIsolatesPluginFailures(t *testing.T) {
 
 type panickyPlugin struct{}
 
+func (panickyPlugin) Meta() Meta {
+	return Meta{ID: "panicky", Name: "Panicky", Description: "test-only"}
+}
+
 func (panickyPlugin) Scan(string, string, string) []Issue { panic("boom") }
 
 func repeat(s string, n int) string {
@@ -174,4 +178,23 @@ func repeat(s string, n int) string {
 		out = append(out, s...)
 	}
 	return string(out)
+}
+
+// 每个插件必须有完整的注册元数据：-plugins-list 直接把它们打印给用户，
+// 空字段会显示成一行残缺的列表。
+func TestEveryPluginHasCompleteMetadata(t *testing.T) {
+	metas := List()
+	if len(metas) != 9 {
+		t.Fatalf("registry holds %d plugins, want 9", len(metas))
+	}
+	seen := map[string]bool{}
+	for _, m := range metas {
+		if m.ID == "" || m.Name == "" || m.Description == "" {
+			t.Errorf("%+v: metadata fields must all be filled", m)
+		}
+		if seen[m.ID] {
+			t.Errorf("duplicate plugin id %q", m.ID)
+		}
+		seen[m.ID] = true
+	}
 }

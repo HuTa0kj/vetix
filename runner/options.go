@@ -2,23 +2,30 @@ package runner
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/projectdiscovery/goflags"
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/gologger/levels"
+
+	"vetix/internal/plugin"
+	"vetix/internal/report"
 )
 
 type Options struct {
-	Source     string
-	Language   string
-	Output     bool
-	NoOutput   bool
-	OutputDir  string
-	Force      bool
-	Debug      bool
-	ConfigPath string
+	Source      string
+	Language    string
+	Output      bool
+	NoOutput    bool
+	OutputDir   string
+	Force       bool
+	Debug       bool
+	PluginsList bool
+	ConfigPath  string
 }
 
 func ParseOptions() (*Options, error) {
@@ -45,6 +52,10 @@ func ParseOptions() (*Options, error) {
 		flagSet.BoolVarP(&options.Debug, "debug", "d", false, "Enable debug logging"),
 	)
 
+	flagSet.CreateGroup("plugin", "Plugin",
+		flagSet.BoolVarP(&options.PluginsList, "plugins-list", "pl", false, "List built-in plugins with their names and descriptions"),
+	)
+
 	// 不调用 flagSet.Parse()：它每次都会往 ~/.config/<tool>/config.yaml 写一份
 	// 自己的配置文件并做配置合并，与我们工作目录下的 config.yaml 语义冲突。
 	// 直接解析到导出的 CommandLine，保留 goflags 的 flag 类型与分组写法。
@@ -52,6 +63,12 @@ func ParseOptions() (*Options, error) {
 	flagSet.CommandLine.Usage = func() { usage(os.Stderr) }
 	if err := flagSet.CommandLine.Parse(os.Args[1:]); err != nil {
 		return nil, fmt.Errorf("Parse flags error: %v", err)
+	}
+
+	// -pl 是纯查询：打印内置插件清单后即退出，不要求 -s，也不打 banner。
+	if options.PluginsList {
+		printPlugins(os.Stdout)
+		os.Exit(0)
 	}
 
 	ShowBanner()
@@ -92,7 +109,38 @@ func usage(w *os.File) {
 
   DEBUG
     -d, -debug           Enable debug logging
+
+  PLUGIN
+    -pl, -plugins-list   List built-in plugins with their names and descriptions
 `)
+}
+
+// printPlugins 输出内置插件清单，样式与报告渲染同源：暗色 ID 作键、粗体名称、
+// 描述按终端宽度折行并悬挂缩进到名称列。描述是完整句子，不折行的话窄终端上
+// 会顶出屏幕。
+func printPlugins(w io.Writer) {
+	metas := plugin.List()
+	idWidth := 0
+	for _, m := range metas {
+		if len(m.ID) > idWidth {
+			idWidth = len(m.ID)
+		}
+	}
+	descIndent := 2 + idWidth + 2
+
+	fmt.Fprintf(w, "\n%s\n\n", text.FgHiBlue.Sprintf("────────── Built-in Plugins (%d) ──────────", len(metas)))
+	for i, m := range metas {
+		if i > 0 {
+			fmt.Fprintln(w)
+		}
+		fmt.Fprintf(w, "  %s  %s\n", text.FgHiBlack.Sprintf("%-*s", idWidth, m.ID), text.Bold.Sprint(m.Name))
+		lines := report.WrapIndent(m.Description, descIndent)
+		fmt.Fprintln(w, strings.Repeat(" ", descIndent)+lines[0])
+		for _, l := range lines[1:] {
+			fmt.Fprintln(w, l)
+		}
+	}
+	fmt.Fprintln(w)
 }
 
 func (o *Options) validateOptions() error {

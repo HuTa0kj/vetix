@@ -56,6 +56,14 @@ func IsPublicIP(ip string) bool {
 
 type PublicIPCheckPlugin struct{}
 
+func (PublicIPCheckPlugin) Meta() Meta {
+	return Meta{
+		ID:          "public_ip",
+		Name:        "Public IP Address",
+		Description: "Detects hard-coded public IPv4 addresses, commonly used as C2 endpoints or exfiltration targets.",
+	}
+}
+
 func (PublicIPCheckPlugin) Scan(skillDir, filePath, content string) []Issue {
 	matches := ipPattern.FindAllString(content, -1)
 	seen := map[string]bool{}

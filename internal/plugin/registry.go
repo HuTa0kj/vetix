@@ -1,15 +1,16 @@
 package plugin
 
 // 插件注册表。Go 二进制没有运行时发现机制，插件必须显式登记；顺序即插件执行
-// 顺序，保持按名字排序。
+// 顺序，保持按 ID 排序。元数据（ID / Name / Description）由各插件文件里的
+// Plugin.Meta() 自己声明，这里只负责登记，不保存任何插件的描述。
 func init() {
-	Register("base64_exec", Base64ExecPlugin{})
-	Register("binary_file", BinaryFileCheckPlugin{})
-	Register("consecutive_newlines", ConsecutiveNewlinesCheckPlugin{})
-	Register("exceptional_file", ExceptionalFileCheckPlugin{})
-	Register("large_file", LargeFileCheckPlugin{})
-	Register("long_file", LongFileCheckPlugin{})
-	Register("public_ip", PublicIPCheckPlugin{})
-	Register("rare_file", RareFileCheckPlugin{})
-	Register("reverse_shell", ReverseShellPlugin{})
+	Register(Base64ExecPlugin{})
+	Register(BinaryFileCheckPlugin{})
+	Register(ConsecutiveNewlinesCheckPlugin{})
+	Register(ExceptionalFileCheckPlugin{})
+	Register(LargeFileCheckPlugin{})
+	Register(LongFileCheckPlugin{})
+	Register(PublicIPCheckPlugin{})
+	Register(RareFileCheckPlugin{})
+	Register(ReverseShellPlugin{})
 }

@@ -25,6 +25,13 @@ func widthBudget() int {
 	return onceWidth()
 }
 
+// WrapIndent 按终端宽度折行文本，续行悬挂缩进 indent 列，首行不带缩进。
+// 导出给 report 自身之外的终端输出（如 runner 的 -pl）复用同一套折行口径，
+// 免得每处自算宽度、阈值漂移。
+func WrapIndent(s string, indent int) []string {
+	return wrapIndent(s, widthBudget(), indent)
+}
+
 var onceWidth = sync.OnceValue(func() int { return clampWidth(detectWidth()) })
 
 func clampWidth(w int) int {

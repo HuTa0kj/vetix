@@ -44,22 +44,37 @@ type Issue struct {
 	AuditRequired bool
 }
 
+// Meta 是插件的注册元数据。ID 是稳定标识（蛇形命名，供脚本与报告对照），
+// Name 与 Description 是面向用户的人类可读信息，由 -plugins-list 展示。
+type Meta struct {
+	ID          string
+	Name        string
+	Description string
+}
+
 type Plugin interface {
+	// Meta 声明插件的注册元数据。它与 Scan 放在同一个实现里：改一个插件只碰
+	// 一个文件，registry 只做登记，不集中保存任何插件的描述。
+	Meta() Meta
 	// Scan 返回 content 中的命中项；插件自行决定适用于哪些文件。
 	Scan(skillDir, filePath, content string) []Issue
 }
 
 // registry 保存所有插件。Go 插件必须编译进二进制，所以新增插件 = 在本包加文件
 // 并在 init 中 Register，没有目录扫描式的自动发现。
-var registry []named
+var registry []Plugin
 
-type named struct {
-	name string
-	p    Plugin
+func Register(p Plugin) {
+	registry = append(registry, p)
 }
 
-func Register(name string, p Plugin) {
-	registry = append(registry, named{name: name, p: p})
+// List 返回全部已注册插件的元数据，顺序即注册顺序。
+func List() []Meta {
+	out := make([]Meta, 0, len(registry))
+	for _, p := range registry {
+		out = append(out, p.Meta())
+	}
+	return out
 }
 
 func relativePath(filePath, skillDir string) string {
@@ -106,8 +121,8 @@ func ScanDirectory(skillDir string) (map[string][]Issue, error) {
 		}
 		content := string(raw)
 		var issues []Issue
-		for _, n := range registry {
-			issues = append(issues, runPlugin(n, absSkill, fp, content)...)
+		for _, p := range registry {
+			issues = append(issues, runPlugin(p.Meta().ID, p, absSkill, fp, content)...)
 		}
 		if len(issues) > 0 {
 			results[fp] = issues
@@ -116,13 +131,13 @@ func ScanDirectory(skillDir string) (map[string][]Issue, error) {
 	return results, nil
 }
 
-func runPlugin(n named, skillDir, filePath, content string) (issues []Issue) {
+func runPlugin(id string, p Plugin, skillDir, filePath, content string) (issues []Issue) {
 	defer func() {
 		if r := recover(); r != nil {
-			warnf("[%s] crashed on %s: %v", n.name, filePath, r)
+			warnf("[%s] crashed on %s: %v", id, filePath, r)
 		}
 	}()
-	return n.p.Scan(skillDir, filePath, content)
+	return p.Scan(skillDir, filePath, content)
 }
 
 var warnSink func(format string, args ...any)

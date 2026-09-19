@@ -396,7 +396,11 @@ func wrapIndent(s string, width, indent int) []string {
 			out = append(out, "")
 			continue
 		}
-		out = append(out, strings.Split(text.WrapSoft(para, body), "\n")...)
+		// WrapSoft 会把每行 pad 到等宽（软折行为了原地重绘），复制出来带尾随空格，
+		// 在这里统一剪掉——空行注释里"不带尾随空格"的口径因此对每一行都成立。
+		for _, seg := range strings.Split(text.WrapSoft(para, body), "\n") {
+			out = append(out, strings.TrimRight(seg, " "))
+		}
 	}
 	for i := 1; i < len(out); i++ {
 		// 空行不补缩进：打出来是纯换行，复制出来的文本也不带尾随空格。

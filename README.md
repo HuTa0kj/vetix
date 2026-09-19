@@ -183,7 +183,17 @@ Nine deterministic rules are compiled into the binary. Every plugin runs against
 Plugins are located in `internal/plugin/`. When adding a new file that implements `Plugin`, you need to register it in `internal/plugin/registry.go`:
 
 ```go
+package plugin
+
 type MyCheckPlugin struct{}
+
+func (MyCheckPlugin) Meta() Meta {
+    return Meta{
+        ID:          "my_check",
+        Name:        "My Check",
+        Description: "One sentence on what this rule detects.",
+    }
+}
 
 func (MyCheckPlugin) Scan(skillDir, filePath, content string) []Issue {
     // Return every hit; set AuditRequired to route a hit through LLM verification.
