@@ -12,7 +12,6 @@ func main() {
 	options, err := runner.ParseOptions()
 	if err != nil {
 		gologger.Error().Msg(err.Error())
-		// 参数校验失败即退出码 1，脚本据此判断扫描是否真的跑起来了。
 		os.Exit(1)
 	}
 	taskRunner, err := runner.New(options)
