@@ -83,7 +83,17 @@ func (r *Runner) Run() error {
 	traceCtx := registerTracing(cfg, state.TaskID)
 
 	factory := llm.NewFactory(cfg)
+	// installRuninfoFilter 在 workflow 构建之后才装，这里先声明，render 运行时已就绪。
+	var restoreRuninfo func()
 	render := func(s *audit.State) error {
+		// 渲染前先恢复真实 stdout：日志走 stderr 同步直达终端，而报告要过 runinfo
+		// 过滤器的管道、由后台协程异步转发。不恢复的话，报告尾段还压在管道里时
+		// "Report saved" 日志就先到了，视觉上插进报告中间。report 是最后一个节点，
+		// 此刻全部 LLM span 已结束，此后不会再有 runinfo 记录，提前恢复是安全的。
+		if restoreRuninfo != nil {
+			restoreRuninfo()
+			restoreRuninfo = nil
+		}
 		report.Render(s)
 		path, err := report.WriteJSON(s)
 		if err != nil {
@@ -103,9 +113,14 @@ func (r *Runner) Run() error {
 	if traceCtx != nil {
 		runCtx = traceCtx(runCtx)
 	}
-	// 追踪开启后，每个 span 的记录都会被回调打到 stdout，这里拦掉。
-	restore := installRuninfoFilter()
-	defer restore()
+	// 追踪开启后，每个 span 的记录都会被回调打到 stdout，这里拦掉。render 会在
+	// report 节点里提前恢复；这里是 workflow 没跑到 report 时的兜底。
+	restoreRuninfo = installRuninfoFilter()
+	defer func() {
+		if restoreRuninfo != nil {
+			restoreRuninfo()
+		}
+	}()
 
 	if _, err := workflow.Invoke(runCtx, map[string]any{}); err != nil {
 		return err
