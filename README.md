@@ -15,6 +15,33 @@ An LLM-agent-based scanner for [SKILL](https://docs.claude.com/en/docs/claude-co
 - **Defense-in-depth sandbox** — the agent reads only inside the skill, symlinks are refused, every write is rejected at the backend, and mutating tools are hidden from the model.
 - **LangSmith tracing** — every agent run is observable end-to-end.
 
+## Common commands
+
+```bash
+Usage:
+  vetix -s <skill-dir> [flags]
+
+Flags:
+  INPUT
+    -s, -source string   SKILL directory path
+
+  CONFIG
+    -c, -config string   Path to the YAML config file (default "./config.yaml")
+    -l, -language string Output language for audit findings (en, zh) (default "en")
+
+  OUTPUT
+    -o, -output          Save the audit report to <output-dir>/<skill-hash-prefix>/report.json (default true)
+    -no-output           Disable saving the audit report to a JSON file
+    -output-dir string   Base directory for saved reports (default "./output")
+    -force               Ignore the cached report and force a full re-scan
+
+  DEBUG
+    -d, -debug           Enable debug logging
+
+  PLUGIN
+    -pl, -plugins-list   List built-in plugins with their names and descriptions
+```
+
 ## Detection Categories
 
 The behavioral analysis agent classifies risks into 10 categories:
@@ -102,29 +129,7 @@ langsmith:
 | `roles.pro` | Reasoning model, for behavioral analysis. |
 | `langsmith` | LangSmith tracing config (optional) |
 
-### Common commands
-
-```bash
-# Scan a SKILL directory
-./vetix -s xxx
-
-# Enable debug logging
-./vetix -s xxx -d
-
-# Use Chinese output for the findings text
-./vetix -s xxx -l zh
-
-# Only render the report in the terminal, do not save a JSON file
-./vetix -s xxx -no-output
-
-# Custom output directory and config path
-./vetix -s xxx -output-dir ./reports -c /etc/vetix/config.yaml
-
-# Ignore a cached report and re-scan
-./vetix -s xxx -force
-```
-
-Reports are written to `<output-dir>/<skill-hash-prefix>/report.json`. A second scan of an unchanged skill renders the cached report instead of re-running the pipeline; pass `-force` to bypass the cache.
+### 
 
 ### Docker
 

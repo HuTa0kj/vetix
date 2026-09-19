@@ -15,6 +15,33 @@
 - **纵深防御沙箱** —— Agent 只能读到 SKILL 自身目录，符号链接一律拒绝，写入在后端层被整体拒绝，写类工具也不出现在模型可见的工具列表里。
 - **LangSmith 追踪** —— 端到端可观测每一次 Agent 运行。
 
+## 常用命令
+
+```bash
+Usage:
+  vetix -s <skill-dir> [flags]
+
+Flags:
+  INPUT
+    -s, -source string   SKILL directory path
+
+  CONFIG
+    -c, -config string   Path to the YAML config file (default "./config.yaml")
+    -l, -language string Output language for audit findings (en, zh) (default "en")
+
+  OUTPUT
+    -o, -output          Save the audit report to <output-dir>/<skill-hash-prefix>/report.json (default true)
+    -no-output           Disable saving the audit report to a JSON file
+    -output-dir string   Base directory for saved reports (default "./output")
+    -force               Ignore the cached report and force a full re-scan
+
+  DEBUG
+    -d, -debug           Enable debug logging
+
+  PLUGIN
+    -pl, -plugins-list   List built-in plugins with their names and descriptions
+```
+
 ## 检测分类
 
 行为分析 Agent 将风险分为 10 个类别：
@@ -101,30 +128,6 @@ langsmith:
 | `roles.lite` | 轻量模型，用于插件命中复核。 |
 | `roles.pro` | 推理模型，用于行为分析。 |
 | `langsmith` | LangSmith 追踪配置（可选） |
-
-### 常用命令
-
-```bash
-# 扫描一个 SKILL 目录
-./vetix -s xxx
-
-# 打开 debug 日志
-./vetix -s xxx -d
-
-# finding 文本使用中文
-./vetix -s xxx -l zh
-
-# 只在终端渲染，不落盘 JSON
-./vetix -s xxx -no-output
-
-# 自定义输出目录与配置路径
-./vetix -s xxx -output-dir ./reports -c /etc/vetix/config.yaml
-
-# 忽略缓存重新扫描
-./vetix -s xxx -force
-```
-
-报告落在 `<output-dir>/<skill-hash-prefix>/report.json`。内容未变的 SKILL 第二次扫描会直接渲染缓存报告而不重跑流水线，加 `-force` 可强制重扫。
 
 ### Docker
 
