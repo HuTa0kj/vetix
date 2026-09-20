@@ -21,6 +21,19 @@ type RiskFinding = llm.RiskFinding
 
 type BehavioralRiskItem = llm.BehavioralRiskItem
 
+// TokenUsage 是一次扫描全部模型调用的 token 用量汇总，直接作为 report.json
+// metadata.usage 的 JSON 形状。零值合法：整轮没有 LLM 调用（全部命中免复核、
+// 无行为分析）就保持零值。
+type TokenUsage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	// ReasoningTokens 是 completion 里思考消耗的部分，取自网关的
+	// completion_token_details；不回这个字段的网关恒为零值。
+	ReasoningTokens int `json:"reasoning_tokens"`
+	TotalTokens     int `json:"total_tokens"`
+	ModelCalls      int `json:"model_calls"`
+}
+
 type TreeStats struct {
 	TopLevel int
 	Files    int
@@ -48,6 +61,9 @@ type State struct {
 	PluginsCheckFindings  map[string][]plugin.Issue
 	PluginsVerifyFindings []RiskFinding
 	LLMFindings           []*BehavioralRiskItem
+	// Usage 由 report 节点在渲染前从回调采集器快照写入。report 是 AllPredecessor
+	// 终端节点，此刻两条 LLM 分支都已结束，没有并发写者，直接赋值不需要锁。
+	Usage TokenUsage
 
 	Err string
 }

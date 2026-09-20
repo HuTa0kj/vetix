@@ -160,6 +160,9 @@ func (r *Runner) scanSkill(ctx context.Context, cfg *config.Config, skillDir, ou
 	handler, traceCtx := registerTracing(cfg, state.TaskID)
 
 	factory := llm.NewFactory(cfg)
+	// token 用量采集器与 workflow 同生命周期：回调在 Invoke 期间触发，render 在
+	// report 节点（终端节点）里读快照，此刻全部模型调用都已结束。
+	usage := newUsageCollector()
 	// installRuninfoFilter 在 workflow 构建之后才装，这里先声明，render 运行时已就绪。
 	var restoreRuninfo func()
 	render := func(s *audit.State) error {
@@ -171,6 +174,7 @@ func (r *Runner) scanSkill(ctx context.Context, cfg *config.Config, skillDir, ou
 			restoreRuninfo()
 			restoreRuninfo = nil
 		}
+		s.Usage = usage.snapshot()
 		report.Render(s)
 		path, err := report.WriteJSON(s)
 		if err != nil {
@@ -203,6 +207,8 @@ func (r *Runner) scanSkill(ctx context.Context, cfg *config.Config, skillDir, ou
 	if handler != nil {
 		invokeOpts = append(invokeOpts, compose.WithCallbacks(handler))
 	}
+	// 与 LangSmith handler 同理按次注入：多个 WithCallbacks 会被框架合并，互不覆盖。
+	invokeOpts = append(invokeOpts, compose.WithCallbacks(usage.Handler()))
 	if _, err := workflow.Invoke(runCtx, map[string]any{}, invokeOpts...); err != nil {
 		return skillResult{}, err
 	}

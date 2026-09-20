@@ -27,6 +27,13 @@ func writeCachedReport(t *testing.T, skillDir, outputDir, scanKey string) {
 			"skill_hash":  hash,
 			"file_number": 1,
 			"scan_key":    scanKey,
+			"usage": map[string]any{
+				"prompt_tokens":     120,
+				"completion_tokens": 60,
+				"reasoning_tokens":  15,
+				"total_tokens":      180,
+				"model_calls":       2,
+			},
 		},
 		"findings": []any{},
 	}
@@ -53,6 +60,11 @@ func TestLoadCachedReportKeyMismatch(t *testing.T) {
 	}
 	if cached == nil {
 		t.Fatal("report with the current scan_key must be a cache hit")
+	}
+	// usage 必须随缓存回填，命中后终端渲染才能继续展示 token 用量。
+	want := TokenUsage{PromptTokens: 120, CompletionTokens: 60, ReasoningTokens: 15, TotalTokens: 180, ModelCalls: 2}
+	if cached.Usage != want {
+		t.Fatalf("cached usage = %+v, want %+v", cached.Usage, want)
 	}
 
 	writeCachedReport(t, skillDir, outputDir, "0000000000000000")

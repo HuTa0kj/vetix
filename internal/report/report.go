@@ -127,6 +127,8 @@ type metadata struct {
 	FileNumber int    `json:"file_number"`
 	// ScanKey 是扫描引擎指纹（版本 + 插件集），读缓存时据此判定缓存是否失效。
 	ScanKey string `json:"scan_key"`
+	// Usage 是整轮扫描全部模型调用的 token 用量，零值表示没有 LLM 调用。
+	Usage audit.TokenUsage `json:"usage"`
 }
 
 type summary struct {
@@ -161,6 +163,7 @@ func build(s *audit.State) document {
 			SkillHash:  s.DirectoryHash,
 			FileNumber: s.FileNumber(),
 			ScanKey:    plugin.Fingerprint(),
+			Usage:      s.Usage,
 		},
 		Summary: summary{
 			PluginFindings:     len(s.PluginsVerifyFindings),
@@ -222,6 +225,11 @@ func Render(s *audit.State) {
 	printKV("Directory", sanitize(s.SkillDir), width)
 	printKV("Files", strconv.Itoa(s.FileNumber()), width)
 	printKV("Language", orDefault(s.Language, "en"), width)
+	// 零值（没有模型调用）不展示：整轮无 LLM 参与的扫描显示 "0 tokens" 只会困惑。
+	if u := s.Usage; u.ModelCalls > 0 {
+		printKV("Tokens", fmt.Sprintf("%d (prompt %d / completion %d, %d model calls)",
+			u.TotalTokens, u.PromptTokens, u.CompletionTokens, u.ModelCalls), width)
+	}
 
 	if line := summaryLine(s); line != "" {
 		fmt.Println()

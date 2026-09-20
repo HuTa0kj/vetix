@@ -22,6 +22,8 @@ type cachedReport struct {
 		// ScanKey 是写入方当时的引擎指纹；旧格式报告没有这个字段，零值必然
 		// 与当前指纹不同，恰好让旧缓存整体失效一次。
 		ScanKey string `json:"scan_key"`
+		// Usage 按值回填 State.Usage，缓存命中时终端渲染仍能展示 token 用量。
+		Usage TokenUsage `json:"usage"`
 	} `json:"metadata"`
 	Findings []Finding `json:"findings"`
 }
@@ -57,6 +59,7 @@ func LoadCachedReport(skillDir, outputDir string) (*State, error) {
 		SaveOutput:    false,
 		DetectedAt:    doc.Metadata.DetectedAt,
 		Language:      orStr(doc.Metadata.Language, "en"),
+		Usage:         doc.Metadata.Usage,
 		// 缓存回读后不再触发单文件快速路径，文件数直接取记录值。
 		SingleSkill: false,
 		Stats:       TreeStats{Files: fileNumber(skillDir, doc.Metadata.FileNumber)},

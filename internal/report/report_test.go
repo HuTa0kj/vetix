@@ -2,6 +2,7 @@ package report
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"os"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 
 	"vetix/internal/audit"
+	"vetix/internal/plugin"
 )
 
 // 报告里的名称、路径、描述都来自被扫描的 SKILL，属于攻击者可控文本。原样打到终端
@@ -85,6 +87,41 @@ func TestRenderOutputHasNoEscapesFromFindings(t *testing.T) {
 	}
 	if !strings.Contains(out, "SKILL.md") || !strings.Contains(out, "Obfuscation") {
 		t.Errorf("visible content missing:\n%s", out)
+	}
+}
+
+// 报告 metadata 的引擎指纹与 token 用量：scan_key 必须等于当前指纹（缓存据此判定
+// 失效），usage 必须从 State 原样带出。
+func TestBuildRecordsScanKeyAndUsage(t *testing.T) {
+	s := &audit.State{
+		SkillDir:      "/tmp/demo",
+		SkillName:     "demo",
+		OutputDir:     "/tmp/out",
+		Language:      "en",
+		SingleSkill:   true,
+		DirectoryHash: strings.Repeat("a", 64),
+		Usage: audit.TokenUsage{
+			PromptTokens: 100, CompletionTokens: 50, ReasoningTokens: 10,
+			TotalTokens: 150, ModelCalls: 2,
+		},
+	}
+
+	doc := build(s)
+	if doc.Metadata.ScanKey != plugin.Fingerprint() {
+		t.Errorf("metadata.scan_key = %q, want %q", doc.Metadata.ScanKey, plugin.Fingerprint())
+	}
+	if doc.Metadata.Usage != s.Usage {
+		t.Errorf("metadata.usage = %+v, want %+v", doc.Metadata.Usage, s.Usage)
+	}
+
+	raw, err := json.Marshal(doc.Metadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"scan_key", "usage", "prompt_tokens", "completion_tokens", "reasoning_tokens", "total_tokens", "model_calls"} {
+		if !strings.Contains(string(raw), `"`+key+`"`) {
+			t.Errorf("metadata JSON missing key %q: %s", key, raw)
+		}
 	}
 }
 
