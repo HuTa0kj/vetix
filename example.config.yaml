@@ -7,9 +7,9 @@ models:
     extra_body: {}
     extra_headers: {}
     thinking: true
-    # response_format 只在无工具的快速路径（单文件 SKILL）上生效。
-    #   tool        —— 走强制工具调用拿结构化输出（默认）
-    #   json_schema —— 网关支持 response_format 的 json_schema 时启用
+    #   response_format 只在无工具的快速路径（单文件 SKILL）上生效。
+    #   tool            走强制工具调用拿结构化输出（默认）
+    #   json_schema     网关支持 response_format 的 json_schema 时启用
     response_format: tool
 
   - id: deepseek-v4-flash
