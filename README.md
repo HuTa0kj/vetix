@@ -16,7 +16,7 @@ An LLM-agent-based scanner for [SKILL](https://docs.claude.com/en/docs/claude-co
 - **Token usage accounting** — the report records the token usage of every model call in a scan (prompt / completion / total + call count), so batch scan costs can be estimated.
 - **LangSmith tracing** — every agent run is observable end-to-end.
 
-## Parameter
+## CLI Options
 
 ```
 Usage:
@@ -60,6 +60,23 @@ vetix -p claude-code
 vetix -pl
 ```
 
+## Report Caching
+
+Scan results are cached per SKILL. Re-scanning the same SKILL renders the existing report directly — the pipeline is skipped entirely and no model calls are made. A cache hit requires two layers of validation; if either fails, a full re-scan runs and overwrites the original report:
+
+1. **Directory hash** — the report is saved to `<output-dir>/<first 16 chars of the directory hash>/report.json`. The hash is computed from the content and structure of every file in the SKILL directory, so adding, deleting, or modifying any file invalidates the cache.
+2. **Engine fingerprint** — the report metadata records the `scan_key` at generation time (derived from the tool version and the built-in plugin set). After upgrading Vetix or changing the plugin set, the old cache is treated as untrusted and handled as a cache miss.
+
+Two more behaviors worth noting:
+
+- Cache lookup is not affected by `-no-output`: as long as the last scan wrote a report to disk, this scan will hit it.
+- Cache validation does not include the model configuration: after changing models in `config.yaml`, a re-scan still hits the old cache. To re-audit with a new model, pass `-force`.
+
+```bash
+# Ignore the cache and force a full re-scan
+vetix -s ./examples/malicious/wacli-1sk -force
+```
+
 ## Detection Categories
 
 The behavioral analysis agent classifies risks into 10 categories:
@@ -86,17 +103,7 @@ Traditional rule-based scanners rely on predefined patterns and signatures, whic
 - **Context-aware analysis** — Agents evaluate risks in the broader context of the entire SKILL, recognizing cross-file interactions and chained vulnerabilities that individual rules cannot capture.
 - **Natural-language explanations** — Every finding comes with a clear, human-readable explanation of the risk, impact, and recommended remediation — not just a rule ID.
 
-## Deployment
-
-### Build
-
-Requires Go 1.25+:
-
-```bash
-git clone git@github.com:HuTa0kj/vetix.git
-cd vetix
-go build -o vetix ./cmd/vetix
-```
+## Configuration
 
 Copy the example config and fill in your model credentials:
 
@@ -104,7 +111,7 @@ Copy the example config and fill in your model credentials:
 cp example.config.yaml config.yaml
 ```
 
-`config.yaml` is read from the current working directory by default (override with `-config`). It defines two LLM roles: a lightweight model for plugin-hit verification, and a stronger model for behavioral analysis.
+`config.yaml` is read from the current working directory by default (override with `-config`). It defines two LLM roles: a lightweight model for plugin-hit verification, and a reasoning model for behavioral analysis.
 
 ```yaml
 models:
@@ -137,15 +144,32 @@ langsmith:
   project: ""
 ```
 
-| Field | Description |
-|-------|-------------|
-| `models` | Available LLMs. Each entry requires `id`, `api_key`, `base_url`; `temperature`, `extra_body`, `extra_headers`, `thinking` and `response_format` are optional. `base_url` must point at the API root — most gateways need the `/v1` suffix, otherwise they serve a web page instead of JSON. |
-| `models[].extra_headers` | Extra HTTP headers sent with every request, e.g. gateway routing keys. Applied at the transport layer, so agent-internal model calls get them too. |
-| `models[].thinking` | Whether to request reasoning. Defaults to on for the `pro` role and off for `lite`. Note that some gateways reject a forced tool call while reasoning is enabled; the single-file fast path detects this and falls back to `response_format` automatically. |
+| Field                      | Description |
+| -------------------------- | ----------- |
+| `models`                   | Available LLMs. Each entry requires `id`, `api_key`, `base_url`; `temperature`, `extra_body`, `extra_headers`, `thinking` and `response_format` are optional. `base_url` must point at the API root — most gateways need the `/v1` suffix, otherwise they serve a web page instead of JSON. |
+| `models[].extra_headers`   | Extra HTTP headers sent with every request, e.g. gateway routing keys. Applied at the transport layer, so agent-internal model calls get them too. |
+| `models[].thinking`        | Whether to request reasoning. Defaults to on for the `pro` role and off for `lite`. Note that some gateways reject a forced tool call while reasoning is enabled; the single-file fast path detects this and falls back to `response_format` automatically. |
 | `models[].response_format` | `tool` (default) forces a named tool call for structured output; `json_schema` uses the gateway's native `response_format`. |
-| `roles.lite` | Fast model, for plugin-hit verification. |
-| `roles.pro` | Reasoning model, for behavioral analysis. |
-| `langsmith` | LangSmith tracing config (optional) |
+| `roles.lite`               | Lightweight model, for plugin-hit verification. |
+| `roles.pro`                | Reasoning model, for behavioral analysis. |
+| `langsmith`                | LangSmith tracing config (optional) |
+
+
+## Deployment
+
+### Binary
+
+Download the binary for the corresponding release: https://github.com/HuTa0kj/vetix/releases
+
+### Build
+
+Requires Go 1.25+:
+
+```bash
+git clone git@github.com:HuTa0kj/vetix.git
+cd vetix
+go build -o vetix ./cmd/vetix
+```
 
 ### Docker
 
@@ -178,9 +202,14 @@ docker run --rm \
 docker compose run --rm vetix -s /skills/xxx
 ```
 
-## Built-in Plugins
+## Plugins
 
-Nine deterministic rules are compiled into the binary. Every plugin runs against every file in the SKILL directory; hits marked **LLM-verified** are re-judged against the real file content by the verification pass before reaching the report, the rest go straight into it.
+### Built-in Plugins
+
+Every plugin runs against every file in the SKILL directory; hits marked **LLM-verified** are re-judged against the real file content by the verification pass before reaching the report, the rest go straight into it.
+
+> [!TIP]
+> Plugins are static security checks based on code and rules. When safety cannot be confirmed (e.g. encrypted or binary files), they report a security risk — this does not necessarily mean the file is harmful, only that it deserves closer attention.
 
 | Plugin | Detects | Default severity | LLM-verified |
 |---|---|---|---|
@@ -191,10 +220,10 @@ Nine deterministic rules are compiled into the binary. Every plugin runs against
 | `exceptional_file` | Text files full of non-printable characters | medium | no |
 | `large_file` | Single files over 2 MB | medium | no |
 | `long_file` | Single files over 3000 lines | medium | no |
-| `public_ip` | Hard-coded public IPv4 addresses | medium | yes |
+| `public_ip` | Hard-coded public IP addresses | medium | yes |
 | `rare_file` | Files whose extension is outside the text whitelist | medium | no |
 
-## Adding a Plugin
+### Adding a Plugin
 
 Plugins are located in `internal/plugin/`. When adding a new file that implements `Plugin`, you need to register it in `internal/plugin/registry.go`:
 

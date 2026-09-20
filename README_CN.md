@@ -16,7 +16,7 @@
 - **Token 用量统计** —— 报告记录整轮扫描全部模型调用的 token 用量（prompt / completion / 总量 / 调用次数），便于估算批量扫描成本。
 - **LangSmith 追踪** —— 端到端可观测每一次 Agent 运行。
 
-## 参数
+## 命令行选项
 
 ```
 Usage:
@@ -60,6 +60,23 @@ vetix -p claude-code
 vetix -pl
 ```
 
+## 报告缓存
+
+每次扫描的结果会按 SKILL 缓存，重复扫描同一个 SKILL 时直接渲染已有报告，不再执行流水线，也不产生任何模型调用。缓存命中与否由两层校验共同决定，任何一层不满足都会触发完整重扫，并覆写原报告：
+
+1. 目录哈希 —— 报告保存在 `<output-dir>/<目录哈希前16位>/report.json`。哈希由 SKILL 目录内全部文件的内容与结构计算得出，任何一个文件新增、删除或修改都会让缓存失效。
+2. 引擎指纹 —— 报告的元数据里记录了生成时的 `scan_key`（由工具版本和内置插件集合计算）。升级 Vetix 或插件集合发生变化后，旧缓存不再可信，按无缓存处理。
+
+另外两点行为需要注意：
+
+- 缓存查找不受 `-no-output` 影响：只要上次扫描把报告落过盘，这次就会直接命中。
+- 缓存校验不包含模型配置：修改 `config.yaml` 里的模型后重新扫描仍会命中旧缓存。想用新模型重新审计，需要加 `-force`。
+
+```bash
+# 忽略缓存，强制完整重扫
+vetix -s ./examples/malicious/wacli-1sk -force
+```
+
 ## 检测分类
 
 行为分析 Agent 将风险分为 10 个类别：
@@ -86,17 +103,7 @@ vetix -pl
 - **上下文感知分析** —— Agent 在整个 SKILL 的全局上下文中评估风险，识别单条规则无法捕获的跨文件交互和链式漏洞。
 - **自然语言解释** —— 每一项发现都附带清晰、易读的风险说明、影响评估和修复建议，而不仅仅是一个规则编号。
 
-## 部署运行
-
-### 编译
-
-需要 Go 1.25 及以上：
-
-```bash
-git clone git@github.com:HuTa0kj/vetix.git
-cd vetix
-go build -o vetix ./cmd/vetix
-```
+## 配置
 
 复制配置模板并填入模型凭据：
 
@@ -104,7 +111,7 @@ go build -o vetix ./cmd/vetix
 cp example.config.yaml config.yaml
 ```
 
-`config.yaml` 默认从当前工作目录读取，可用 `-config` 指定其他路径。它定义了两个 LLM 角色：用于插件命中复核的轻量模型，以及用于行为分析的更强模型。
+`config.yaml` 默认从当前工作目录读取，可用 `-config` 指定其他路径。它定义了两个 LLM 角色：用于插件命中复核的轻量模型，以及用于行为分析的推理模型。
 
 ```yaml
 models:
@@ -137,15 +144,32 @@ langsmith:
   project: ""
 ```
 
-| 字段 | 说明 |
-|-------|-------------|
-| `models` | 可用模型列表。每条必须提供 `id`、`api_key`、`base_url`；`temperature`、`extra_body`、`extra_headers`、`thinking`、`response_format` 可选。`base_url` 要指向 API 根路径，多数网关需要带 `/v1`，否则会返回网页而不是 JSON。 |
-| `models[].extra_headers` | 随每次请求发送的额外 HTTP 头，例如网关的路由标识。在传输层注入，agent 内部的模型调用同样生效。 |
-| `models[].thinking` | 是否请求思考。默认 `pro` 角色开启、`lite` 角色关闭。注意部分网关在思考模式下会拒绝强制工具调用，单文件快速路径会识别这种拒绝并自动改用 `response_format`。 |
+| 字段                       | 说明                                                         |
+| -------------------------- | ------------------------------------------------------------ |
+| `models`                   | 可用模型列表。每条必须提供 `id`、`api_key`、`base_url`；`temperature`、`extra_body`、`extra_headers`、`thinking`、`response_format` 可选。`base_url` 要指向 API 根路径，多数网关需要带 `/v1`，否则会返回网页而不是 JSON。 |
+| `models[].extra_headers`   | 随每次请求发送的额外 HTTP 头，例如网关的路由标识。在传输层注入，agent 内部的模型调用同样生效。 |
+| `models[].thinking`        | 是否请求思考。默认 `pro` 角色开启、`lite` 角色关闭。注意部分网关在思考模式下会拒绝强制工具调用，单文件快速路径会识别这种拒绝并自动改用 `response_format`。 |
 | `models[].response_format` | `tool`（默认）用强制具名工具调用来拿结构化输出；`json_schema` 使用网关原生的 `response_format`。 |
-| `roles.lite` | 轻量模型，用于插件命中复核。 |
-| `roles.pro` | 推理模型，用于行为分析。 |
-| `langsmith` | LangSmith 追踪配置（可选） |
+| `roles.lite`               | 轻量模型，用于插件命中复核。                                 |
+| `roles.pro`                | 推理模型，用于行为分析。                                     |
+| `langsmith`                | LangSmith 追踪配置（可选）                                   |
+
+
+## 部署运行
+
+### 二进制文件
+
+获取对应版本的二进制程序：https://github.com/HuTa0kj/vetix/releases
+
+### 编译
+
+需要 Go 1.25 及以上：
+
+```bash
+git clone git@github.com:HuTa0kj/vetix.git
+cd vetix
+go build -o vetix ./cmd/vetix
+```
 
 ### Docker
 
@@ -178,9 +202,14 @@ docker run --rm \
 docker compose run --rm vetix -s /skills/xxx
 ```
 
-## 内置插件
+## 插件
+
+### 内置插件
 
 每个插件对 SKILL 目录里的每个文件运行；标记为「LLM 复核」的命中会先由复核阶段结合真实文件内容再次判断，其余直接进入报告。
+
+> [!TIP]
+> 插件是基于代码和规则进行的静态安全检测，在无法确认是否安全的情况下（例如加密或二进制文件）会提示安全风险，这不意味着它们一定存在危害，而是应该重点关注。
 
 | 插件 | 检测内容 | 默认严重度 | LLM 复核 |
 |---|---|---|---|
@@ -191,10 +220,10 @@ docker compose run --rm vetix -s /skills/xxx
 | `exceptional_file` | 本应是文本的文件里混入大量不可打印字符 | medium | 否 |
 | `large_file` | 单文件超过 2 MB | medium | 否 |
 | `long_file` | 单文件超过 3000 行 | medium | 否 |
-| `public_ip` | 硬编码的公网 IPv4 地址 | medium | 是 |
+| `public_ip` | 硬编码的公网 IP 地址 | medium | 是 |
 | `rare_file` | 扩展名不在文本白名单内的罕见文件 | medium | 否 |
 
-## 新增插件
+### 新增插件
 
 插件位于 `internal/plugin/`。新增一个实现 `Plugin` 的文件，需要在 `internal/plugin/registry.go` 里注册：
 
