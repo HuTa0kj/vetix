@@ -10,7 +10,7 @@ const banner = "\n" +
 	"  | |  / /__  / /_(_)  __\n" +
 	"  | | / / _ `/ __/ / `/_/\n" +
 	"  | |/ /  __/ /_/ />  <  \n" +
-	"  |___/\\___/\\__/_/_/|_|   %s\n"
+	"  |___/\\___/\\__/_/_/|_|   %s\n\n"
 
 func ShowBanner() {
 	gologger.Print().Msgf(banner, Version)
