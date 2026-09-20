@@ -10,6 +10,7 @@ import (
 
 // AllowedExt 是"正常文件"的扩展名白名单：不在表内的扩展名一律按风险文件处理。
 // 增删条目会直接改变插件的命中集合。
+// 参考：https://github.com/openclaw/clawhub/blob/e8c3947b21175669352bd88ab8f7b00df624ee56/packages/clawdhub/src/schema/textFiles.ts
 var AllowedExt = map[string]bool{
 	".md": true, ".mdx": true, ".txt": true, ".json": true, ".json5": true,
 	".yaml": true, ".yml": true, ".toml": true,
