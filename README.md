@@ -13,11 +13,12 @@ An LLM-agent-based scanner for [SKILL](https://docs.claude.com/en/docs/claude-co
 - **LLM cross-validation** — every plugin hit is re-judged against the real file content by an LLM, so high-recall rules don't drown the final report.
 - **Behavioral analysis agent** — inside a read-only virtual filesystem, traces the full chain "instruction → tool call → host impact" to uncover risks the rules miss: disguised commands, Base64 payloads, remote code loading, prompt injection, credential theft, persistence, and more.
 - **Defense-in-depth sandbox** — the agent reads only inside the skill, symlinks are refused, every write is rejected at the backend, and mutating tools are hidden from the model.
+- **Token usage accounting** — the report records the token usage of every model call in a scan (prompt / completion / total + call count), so batch scan costs can be estimated.
 - **LangSmith tracing** — every agent run is observable end-to-end.
 
 ## Parameter
 
-```bash
+```
 Usage:
   vetix -s <skill-dir> | -p <preset> [flags]
 

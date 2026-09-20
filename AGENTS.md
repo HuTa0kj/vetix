@@ -40,7 +40,7 @@ Scans short-circuit on a cache hit: `runner.Run` derives the skill hash and, if 
 - `plugins_check` runs every registered plugin against every file.
 - `plugins_findings_verify` re-judges plugin hits against the real file content with an LLM (role `lite`). Hits with `AuditRequired=false` skip the LLM entirely.
 - `behavioral_analysis` runs a deep agent over the skill to catch risks the rules miss (role `pro`). Single-file SKILLs take a fast path with no filesystem tools.
-- `report` renders findings to the terminal and writes `report.json` to `<output-dir>/<directory_hash[:16]>/`.
+- `report` renders findings to the terminal and writes `report.json` to `<output-dir>/<directory_hash[:16]>/`. Its metadata includes `usage` — token totals captured by a per-scan model-component callback handler (`runner/usage.go`), written into `audit.State.Usage` just before rendering.
 
 ## Extension Points
 
