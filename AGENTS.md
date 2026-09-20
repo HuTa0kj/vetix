@@ -34,7 +34,7 @@ gather_base_info → plugins_check → plugins_findings_verify ┐
 
 State is shared via `audit.State`; every read and write goes through `compose.ProcessState`, which is the only locking eino provides. The graph is compiled with `compose.WithNodeTriggerMode(compose.AllPredecessor)` — the default `AnyPredecessor` is pregel semantics and would fire `report` before both branches finished.
 
-Scans short-circuit on a cache hit: `runner.Run` derives the skill hash and, if `<output-dir>/<hash[:16]>/report.json` exists, renders it instead of running the pipeline. `-force` bypasses the cache.
+Scans short-circuit on a cache hit: `runner.Run` derives the skill hash and, if `<output-dir>/<hash[:16]>/report.json` exists, renders it instead of running the pipeline. The cached report must also carry a matching `metadata.scan_key` engine fingerprint (`plugin.Fingerprint()` — build version + plugin ID set); a stale or missing fingerprint makes the cached report invalid and triggers a full re-scan that overwrites it. `-force` bypasses the cache.
 
 - `gather_base_info` builds the tree (with per-file line counts), the directory hash, and the single-file flag.
 - `plugins_check` runs every registered plugin against every file.

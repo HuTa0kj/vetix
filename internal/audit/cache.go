@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"vetix/internal/plugin"
 	"vetix/internal/pluginutils"
 )
 
@@ -18,6 +19,9 @@ type cachedReport struct {
 		DetectedAt string `json:"detected_at"`
 		SkillHash  string `json:"skill_hash"`
 		FileNumber int    `json:"file_number"`
+		// ScanKey 是写入方当时的引擎指纹；旧格式报告没有这个字段，零值必然
+		// 与当前指纹不同，恰好让旧缓存整体失效一次。
+		ScanKey string `json:"scan_key"`
 	} `json:"metadata"`
 	Findings []Finding `json:"findings"`
 }
@@ -36,6 +40,11 @@ func LoadCachedReport(skillDir, outputDir string) (*State, error) {
 	}
 	var doc cachedReport
 	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil, nil
+	}
+	// 目录 hash 只证明 skill 内容没变；引擎指纹不匹配说明工具版本或插件集合变过，
+	// 旧结论不再可信，按无缓存处理，由调用方重扫并覆写同一目录。
+	if doc.Metadata.ScanKey != plugin.Fingerprint() {
 		return nil, nil
 	}
 

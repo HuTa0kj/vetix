@@ -13,6 +13,7 @@ import (
 
 	"vetix/internal/audit"
 	"vetix/internal/buildinfo"
+	"vetix/internal/plugin"
 )
 
 var severityColors = map[string]text.Color{
@@ -124,6 +125,8 @@ type metadata struct {
 	OutputDir  string `json:"output_dir"`
 	SkillHash  string `json:"skill_hash"`
 	FileNumber int    `json:"file_number"`
+	// ScanKey 是扫描引擎指纹（版本 + 插件集），读缓存时据此判定缓存是否失效。
+	ScanKey string `json:"scan_key"`
 }
 
 type summary struct {
@@ -157,6 +160,7 @@ func build(s *audit.State) document {
 			OutputDir:  TaskDir(s),
 			SkillHash:  s.DirectoryHash,
 			FileNumber: s.FileNumber(),
+			ScanKey:    plugin.Fingerprint(),
 		},
 		Summary: summary{
 			PluginFindings:     len(s.PluginsVerifyFindings),
