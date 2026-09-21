@@ -191,6 +191,51 @@ func TestPersistenceMechanisms(t *testing.T) {
 	}
 }
 
+func TestReflectiveCalls(t *testing.T) {
+	p := ReflectiveCallCheckPlugin{}
+
+	for _, in := range []string{
+		"getattr(os, 'system')('id')",
+		"getattr(builtins, 'exec')(payload)",
+		"f = getattr(subprocess, 'popen')",
+		"mod = getattr(importlib, '__import__')",
+		"getattr(os, env_name)",
+		"importlib.import_module(plugin_name)",
+		"__import__(args.module)",
+		"dispatch = globals()['__builtins__']",
+	} {
+		if got := scanOne(t, p, in); len(got) != 1 {
+			t.Errorf("reflective pattern %q must be detected, got %d", in, len(got))
+		}
+	}
+
+	// 同一条规则在同一行去重。
+	if got := scanOne(t, p, "getattr(os, 'system'); getattr(builtins, 'exec')"); len(got) != 1 {
+		t.Errorf("same rule on one line must collapse, got %d", len(got))
+	}
+	// 不同规则同行各报一条。
+	if got := scanOne(t, p, "getattr(os, 'system'); importlib.import_module(m)"); len(got) != 2 {
+		t.Errorf("distinct rules on one line must both report, got %d", len(got))
+	}
+	if got := scanOne(t, p, "getattr(os, 'system')"); got[0].Severity != SeverityHigh || got[0].Category != CatObfuscation || !got[0].AuditRequired {
+		t.Errorf("unexpected issue shape: %+v", got[0])
+	}
+
+	// 无害属性、字面量动态导入的直接形式都不算：本插件只抓反射写法本身。
+	for _, in := range []string{
+		"getattr(os, 'environ')",
+		"getattr(config, 'value', None)",
+		"import_module('os')",
+		"__import__('json')",
+		"os.system('ls')",
+		"import importlib.util",
+	} {
+		if got := scanOne(t, p, in); len(got) != 0 {
+			t.Errorf("%q must not be flagged, got %d", in, len(got))
+		}
+	}
+}
+
 func TestSizeAndLengthPluginsAreNotAudited(t *testing.T) {
 	// audit_required=false 的命中直接进报告，不进 LLM 复核，这条口径必须保持。
 	long := make([]byte, 0, 4000)
@@ -299,7 +344,7 @@ func repeat(s string, n int) string {
 // 空字段会显示成一行残缺的列表。
 func TestEveryPluginHasCompleteMetadata(t *testing.T) {
 	metas := List()
-	if len(metas) != 11 {
+	if len(metas) != 12 {
 		t.Fatalf("registry holds %d plugins, want 10", len(metas))
 	}
 	seen := map[string]bool{}

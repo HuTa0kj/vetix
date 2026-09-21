@@ -14,5 +14,6 @@ func init() {
 	Register(PersistenceMechanismsCheckPlugin{})
 	Register(PublicIPCheckPlugin{})
 	Register(RareFileCheckPlugin{})
+	Register(ReflectiveCallCheckPlugin{})
 	Register(ReverseShellPlugin{})
 }
