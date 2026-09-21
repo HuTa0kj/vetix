@@ -144,6 +144,53 @@ func TestCredentialPaths(t *testing.T) {
 	}
 }
 
+func TestPersistenceMechanisms(t *testing.T) {
+	p := PersistenceMechanismsCheckPlugin{}
+
+	for _, in := range []string{
+		"(crontab -l) 2>/dev/null",
+		"echo '* * * * * cmd' | crontab -",
+		"/etc/cron.daily/backup",
+		"echo 'alias x=y' >> ~/.zshrc",
+		"tee -a ~/.bashrc",
+		"open(os.path.expanduser('~/.zshrc'), 'a')",
+		"systemctl --user enable evil.service",
+		"cp agent.plist ~/Library/LaunchAgents/",
+		"launchctl load ~/Library/LaunchAgents/com.x.plist",
+		"~/.config/autostart/evil.desktop",
+		"schtasks /create /tn updater",
+		"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+	} {
+		if got := scanOne(t, p, in); len(got) != 1 {
+			t.Errorf("persistence pattern %q must be detected, got %d", in, len(got))
+		}
+	}
+
+	// 同一条规则在同一行去重。
+	if got := scanOne(t, p, "crontab -e; crontab -l"); len(got) != 1 {
+		t.Errorf("same rule on one line must collapse, got %d", len(got))
+	}
+	if got := scanOne(t, p, "crontab -e"); got[0].Severity != SeverityHigh || got[0].Category != CatPersistence || !got[0].AuditRequired {
+		t.Errorf("unexpected issue shape: %+v", got[0])
+	}
+
+	// 单纯读取或提及启动文件、非 enable 的 systemctl 子命令都不算。
+	for _, in := range []string{
+		"cat ~/.zshrc to inspect",
+		"the .zshrc file documents aliases",
+		"systemctl status nginx",
+		"systemctl restart nginx",
+	} {
+		if got := scanOne(t, p, in); len(got) != 0 {
+			t.Errorf("%q must not be flagged, got %d", in, len(got))
+		}
+	}
+	// 提及 LaunchAgents 目录本身就是落点，要报。
+	if got := scanOne(t, p, "drop into LaunchAgents"); len(got) != 1 {
+		t.Errorf("LaunchAgents directory reference must be flagged, got %d", len(got))
+	}
+}
+
 func TestSizeAndLengthPluginsAreNotAudited(t *testing.T) {
 	// audit_required=false 的命中直接进报告，不进 LLM 复核，这条口径必须保持。
 	long := make([]byte, 0, 4000)
@@ -252,7 +299,7 @@ func repeat(s string, n int) string {
 // 空字段会显示成一行残缺的列表。
 func TestEveryPluginHasCompleteMetadata(t *testing.T) {
 	metas := List()
-	if len(metas) != 10 {
+	if len(metas) != 11 {
 		t.Fatalf("registry holds %d plugins, want 10", len(metas))
 	}
 	seen := map[string]bool{}

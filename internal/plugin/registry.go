@@ -11,6 +11,7 @@ func init() {
 	Register(ExceptionalFileCheckPlugin{})
 	Register(LargeFileCheckPlugin{})
 	Register(LongFileCheckPlugin{})
+	Register(PersistenceMechanismsCheckPlugin{})
 	Register(PublicIPCheckPlugin{})
 	Register(RareFileCheckPlugin{})
 	Register(ReverseShellPlugin{})

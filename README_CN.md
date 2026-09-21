@@ -218,6 +218,7 @@ docker compose run --rm vetix -s /skills/xxx
 | `binary_file` | SKILL 目录中的二进制文件 | high | 否 |
 | `consecutive_newlines` | 30 个以上连续换行隐藏内容 | high | 否 |
 | `credential_paths` | 引用本地凭据存储——SSH 密钥、云厂商配置、浏览器 Cookie 数据库等 | high | 是 |
+| `persistence_mechanisms` | 跨会话持久化——cron 任务、写入 shell 启动文件、systemd / launchd 注册、Windows 计划任务与 Run 注册表键 | high | 是 |
 | `exceptional_file` | 本应是文本的文件里混入大量不可打印字符 | medium | 否 |
 | `large_file` | 单文件超过 2 MB | medium | 否 |
 | `long_file` | 单文件超过 3000 行 | medium | 否 |
