@@ -218,6 +218,7 @@ Every plugin runs against every file in the SKILL directory; hits marked **LLM-v
 | `binary_file` | Binary files inside the SKILL directory | high | no |
 | `consecutive_newlines` | Runs of 30+ consecutive newlines hiding content | high | no |
 | `credential_paths` | References to local credential stores — SSH keys, cloud provider configs, browser cookie databases | high | yes |
+| `horizontal_padding` | Runs of 40+ horizontal whitespace characters followed by content, hiding it beyond the terminal viewport | high | no |
 | `persistence_mechanisms` | Attempts to persist across sessions — cron jobs, shell startup file writes, systemd / launchd registration, Windows scheduled tasks and Run keys | high | yes |
 | `reflective_call` | Reflective access that splits dangerous names apart | high | yes |
 | `exceptional_file` | Text files full of non-printable characters | medium | no |

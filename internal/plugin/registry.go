@@ -9,6 +9,7 @@ func init() {
 	Register(ConsecutiveNewlinesCheckPlugin{})
 	Register(CredentialPathsCheckPlugin{})
 	Register(ExceptionalFileCheckPlugin{})
+	Register(HorizontalPaddingCheckPlugin{})
 	Register(LargeFileCheckPlugin{})
 	Register(LongFileCheckPlugin{})
 	Register(PersistenceMechanismsCheckPlugin{})

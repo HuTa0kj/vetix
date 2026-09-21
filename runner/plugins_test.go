@@ -14,7 +14,7 @@ func TestPrintPlugins(t *testing.T) {
 	printPlugins(&buf)
 	out := buf.String()
 
-	if !strings.Contains(out, "Built-in Plugins (12)") {
+	if !strings.Contains(out, "Built-in Plugins (13)") {
 		t.Errorf("header with count missing:\n%s", out)
 	}
 	for _, m := range plugin.List() {

