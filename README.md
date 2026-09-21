@@ -217,6 +217,7 @@ Every plugin runs against every file in the SKILL directory; hits marked **LLM-v
 | `reverse_shell` | Reverse-shell patterns — `/dev/tcp`, `nc -e`, `socat exec:` | critical | yes |
 | `binary_file` | Binary files inside the SKILL directory | high | no |
 | `consecutive_newlines` | Runs of 30+ consecutive newlines hiding content | high | no |
+| `credential_paths` | References to local credential stores — SSH keys, cloud provider configs, browser cookie databases | high | yes |
 | `exceptional_file` | Text files full of non-printable characters | medium | no |
 | `large_file` | Single files over 2 MB | medium | no |
 | `long_file` | Single files over 3000 lines | medium | no |

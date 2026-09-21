@@ -217,6 +217,7 @@ docker compose run --rm vetix -s /skills/xxx
 | `reverse_shell` | 反弹 Shell 特征——`/dev/tcp`、`nc -e`、`socat exec:` | critical | 是 |
 | `binary_file` | SKILL 目录中的二进制文件 | high | 否 |
 | `consecutive_newlines` | 30 个以上连续换行隐藏内容 | high | 否 |
+| `credential_paths` | 引用本地凭据存储——SSH 密钥、云厂商配置、浏览器 Cookie 数据库等 | high | 是 |
 | `exceptional_file` | 本应是文本的文件里混入大量不可打印字符 | medium | 否 |
 | `large_file` | 单文件超过 2 MB | medium | 否 |
 | `long_file` | 单文件超过 3000 行 | medium | 否 |
