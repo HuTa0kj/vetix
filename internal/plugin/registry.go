@@ -7,6 +7,7 @@ func init() {
 	Register(Base64ExecPlugin{})
 	Register(BinaryFileCheckPlugin{})
 	Register(ConsecutiveNewlinesCheckPlugin{})
+	Register(CredentialPathsCheckPlugin{})
 	Register(ExceptionalFileCheckPlugin{})
 	Register(LargeFileCheckPlugin{})
 	Register(LongFileCheckPlugin{})

@@ -3,7 +3,9 @@ package plugin
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func scanOne(t *testing.T, p Plugin, content string) []Issue {
@@ -73,6 +75,72 @@ func TestPublicIPFiltersPrivateRanges(t *testing.T) {
 	// 去重：同一个 IP 出现两次只报一条。
 	if got := scanOne(t, p, "8.8.8.8 and 8.8.8.8"); len(got) != 1 {
 		t.Errorf("duplicate IPs must collapse: %d", len(got))
+	}
+}
+
+func TestCredentialPaths(t *testing.T) {
+	p := CredentialPathsCheckPlugin{}
+
+	for _, in := range []string{
+		"cat ~/.ssh/id_rsa",
+		"/home/alice/.aws/credentials",
+		"read ~/.kube/config",
+		"/etc/shadow",
+		"load .env",
+		"fetch secrets.yaml",
+		"Google/Chrome/Default/Cookies",
+		"~/.docker/config.json",
+		".git-credentials",
+	} {
+		if got := scanOne(t, p, in); len(got) != 1 {
+			t.Errorf("credential path %q must be detected, got %d", in, len(got))
+		}
+	}
+
+	// 同一条规则在同一行去重。
+	if got := scanOne(t, p, "cat ~/.ssh/id_rsa ~/.ssh/authorized_keys"); len(got) != 1 {
+		t.Errorf("same rule on one line must collapse, got %d", len(got))
+	}
+	// 不同规则同行各报一条。
+	if got := scanOne(t, p, "cat ~/.ssh/id_rsa /etc/shadow"); len(got) != 2 {
+		t.Errorf("distinct rules on one line must both report, got %d", len(got))
+	}
+	if got := scanOne(t, p, "cat ~/.ssh/id_rsa"); got[0].Severity != SeverityHigh || got[0].Category != CatSensitiveFileAccess || !got[0].AuditRequired {
+		t.Errorf("unexpected issue shape: %+v", got[0])
+	}
+
+	// 超长命中按字符截断到 80，不能把多字节字符切成半个码点。
+	longUnicode := "Chrome/" + repeat("路径", 60) + "/Cookies"
+	got := scanOne(t, p, longUnicode)
+	if len(got) != 1 {
+		t.Fatalf("long browser path must be detected, got %d", len(got))
+	}
+	if !utf8.ValidString(got[0].Description) {
+		t.Errorf("truncated description must stay valid UTF-8: %q", got[0].Description)
+	}
+	// 只数括号内的命中文本："References <label> (<text>)."
+	start := strings.LastIndex(got[0].Description, "(")
+	end := strings.LastIndex(got[0].Description, ")")
+	if start < 0 || end < start {
+		t.Fatalf("description must quote the matched text: %q", got[0].Description)
+	}
+	matched := strings.TrimSuffix(got[0].Description[start+1:end], "...")
+	if n := len([]rune(matched)); n > 80 {
+		t.Errorf("matched text must cap at 80 runes, got %d", n)
+	}
+
+	// 同前缀但无害的文件名、无路径语义的词都不能命中。
+	for _, in := range []string{
+		".envrc",
+		".env.example",
+		"plain ssh key mention",
+		"docs/Cookies.md",
+		"use the AWS console",
+		"scp file to remote",
+	} {
+		if got := scanOne(t, p, in); len(got) != 0 {
+			t.Errorf("%q must not be flagged, got %d", in, len(got))
+		}
 	}
 }
 
@@ -184,8 +252,8 @@ func repeat(s string, n int) string {
 // 空字段会显示成一行残缺的列表。
 func TestEveryPluginHasCompleteMetadata(t *testing.T) {
 	metas := List()
-	if len(metas) != 9 {
-		t.Fatalf("registry holds %d plugins, want 9", len(metas))
+	if len(metas) != 10 {
+		t.Fatalf("registry holds %d plugins, want 10", len(metas))
 	}
 	seen := map[string]bool{}
 	for _, m := range metas {
