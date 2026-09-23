@@ -221,6 +221,7 @@ docker compose run --rm vetix -s /skills/xxx
 | `horizontal_padding` | 一行内 40 个以上连续水平空白后跟内容，把内容藏到终端可视宽度之外 | high | 否 |
 | `persistence_mechanisms` | 跨会话持久化——cron 任务、写入 shell 启动文件、systemd / launchd 注册、Windows 计划任务与 Run 注册表键 | high | 是 |
 | `reflective_call` | 把危险函数名拆散的反射调用 | high | 是 |
+| `typosquatting` | 声明的依赖包名与知名 PyPI / npm 包只差一两处编辑 | high | 是 |
 | `unicode_confusables` | 用同形 Unicode 字符伪装的标识符，归一化后等于危险名称 | high | 是 |
 | `exceptional_file` | 本应是文本的文件里混入大量不可打印字符 | medium | 否 |
 | `large_file` | 单文件超过 2 MB | medium | 否 |

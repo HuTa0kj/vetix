@@ -17,5 +17,6 @@ func init() {
 	Register(RareFileCheckPlugin{})
 	Register(ReflectiveCallCheckPlugin{})
 	Register(ReverseShellPlugin{})
+	Register(TyposquattingCheckPlugin{})
 	Register(UnicodeConfusablesCheckPlugin{})
 }

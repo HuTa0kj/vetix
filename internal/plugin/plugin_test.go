@@ -308,6 +308,52 @@ func TestUnicodeConfusables(t *testing.T) {
 	}
 }
 
+func TestTyposquatting(t *testing.T) {
+	p := TyposquattingCheckPlugin{}
+	dir := t.TempDir()
+
+	// requirements.txt：reqeusts 是相邻换位（OSA 距离 1），python-dateuti1 是
+	// 单字符替换；真名和无关包名不报。
+	req := filepath.Join(dir, "requirements.txt")
+	content := "requests==2.31.0\nreqeusts==2.31.0\npython-dateuti1==2.9.0\nmy-own-package==1.0\nflask-cors==4.0.0\ngit+https://example.com/x.git\n"
+	got := p.Scan(dir, req, content)
+	if len(got) != 2 {
+		t.Fatalf("requirements.txt must flag exactly 2 names, got %d: %+v", len(got), got)
+	}
+	if !strings.Contains(got[0].Description, `"reqeusts"`) || got[0].Line != 2 {
+		t.Errorf("first hit must be reqeusts on line 2: %+v", got[0])
+	}
+	if !strings.Contains(got[1].Description, `"python-dateuti1"`) {
+		t.Errorf("second hit must be python-dateuti1: %+v", got[1])
+	}
+
+	// package.json：dependencies / devDependencies 里的键都要比对。
+	pj := filepath.Join(dir, "package.json")
+	pjContent := `{"name": "mytool", "dependencies": {"expres": "^4.18.2", "lodahs": "^4"}, "devDependencies": {"typescript": "^5"}}`
+	if got := p.Scan(dir, pj, pjContent); len(got) != 2 {
+		t.Errorf("package.json must flag expres and lodahs, got %d: %+v", len(got), got)
+	}
+
+	// pyproject.toml：poetry 键与 PEP 621 数组都解析。
+	pt := filepath.Join(dir, "pyproject.toml")
+	ptContent := "[tool.poetry.dependencies]\npython = \"^3.11\"\nreqests = \"^2.0\"\n\n[project]\ndependencies = [\"djang0>=5.0\", \"flask>=3.0\"]\n"
+	if got := p.Scan(dir, pt, ptContent); len(got) != 2 {
+		t.Errorf("pyproject.toml must flag reqests and djang0, got %d: %+v", len(got), got)
+	}
+
+	// 非清单文件不比对；全干净清单不报。
+	if got := p.Scan(dir, filepath.Join(dir, "SKILL.md"), "install reqests now"); len(got) != 0 {
+		t.Errorf("non-manifest files must not be scanned, got %d", len(got))
+	}
+	if got := p.Scan(dir, req, "requests==2.31.0\nnumpy>=1.26\n"); len(got) != 0 {
+		t.Errorf("clean manifest must not be flagged, got %d", len(got))
+	}
+	// 命中形状：high / Network Abuse / 送复核。
+	if got := p.Scan(dir, req, "reqests==2.0\n"); got[0].Severity != SeverityHigh || got[0].Category != CatNetworkAbuse || !got[0].AuditRequired {
+		t.Errorf("unexpected issue shape: %+v", got[0])
+	}
+}
+
 func TestSizeAndLengthPluginsAreNotAudited(t *testing.T) {
 	// audit_required=false 的命中直接进报告，不进 LLM 复核，这条口径必须保持。
 	long := make([]byte, 0, 4000)
@@ -416,7 +462,7 @@ func repeat(s string, n int) string {
 // 空字段会显示成一行残缺的列表。
 func TestEveryPluginHasCompleteMetadata(t *testing.T) {
 	metas := List()
-	if len(metas) != 14 {
+	if len(metas) != 15 {
 		t.Fatalf("registry holds %d plugins, want 10", len(metas))
 	}
 	seen := map[string]bool{}
