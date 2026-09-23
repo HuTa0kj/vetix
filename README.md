@@ -221,6 +221,7 @@ Every plugin runs against every file in the SKILL directory; hits marked **LLM-v
 | `horizontal_padding` | Runs of 40+ horizontal whitespace characters followed by content, hiding it beyond the terminal viewport | high | no |
 | `persistence_mechanisms` | Attempts to persist across sessions — cron jobs, shell startup file writes, systemd / launchd registration, Windows scheduled tasks and Run keys | high | yes |
 | `reflective_call` | Reflective access that splits dangerous names apart | high | yes |
+| `unicode_confusables` | Identifiers written with look-alike Unicode characters that normalize to dangerous names | high | yes |
 | `exceptional_file` | Text files full of non-printable characters | medium | no |
 | `large_file` | Single files over 2 MB | medium | no |
 | `long_file` | Single files over 3000 lines | medium | no |

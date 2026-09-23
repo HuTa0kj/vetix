@@ -273,6 +273,41 @@ func TestHorizontalPadding(t *testing.T) {
 	}
 }
 
+func TestUnicodeConfusables(t *testing.T) {
+	p := UnicodeConfusablesCheckPlugin{}
+
+	// 西里尔 о(U+043E) 伪装的 os、西里尔 е(U+0435) 伪装的 eval、
+	// 大写西里尔 О(U+041E) + ASCII S 伪装的 OS。
+	for _, in := range []string{
+		"оs.system('id')",
+		"еval(payload)",
+		"importlib.import_module(ОS)",
+	} {
+		if got := scanOne(t, p, in); len(got) != 1 {
+			t.Errorf("confusable identifier in %q must be detected, got %d", in, len(got))
+		}
+	}
+
+	// 同一行骨架化到同一个名字的 token 去重。
+	if got := scanOne(t, p, "оs.оs()"); len(got) != 1 {
+		t.Errorf("same skeleton on one line must collapse, got %d", len(got))
+	}
+	if got := scanOne(t, p, "оs.system('id')"); got[0].Severity != SeverityHigh || got[0].Category != CatObfuscation || !got[0].AuditRequired {
+		t.Errorf("unexpected issue shape: %+v", got[0])
+	}
+
+	// 纯 ASCII 的真 os.system 不归本插件管；无害的非 ASCII 标识符不报。
+	for _, in := range []string{
+		"os.system('ls')",
+		"中文变量 = 1",
+		"naïve = true",
+	} {
+		if got := scanOne(t, p, in); len(got) != 0 {
+			t.Errorf("%q must not be flagged, got %d", in, len(got))
+		}
+	}
+}
+
 func TestSizeAndLengthPluginsAreNotAudited(t *testing.T) {
 	// audit_required=false 的命中直接进报告，不进 LLM 复核，这条口径必须保持。
 	long := make([]byte, 0, 4000)
@@ -381,7 +416,7 @@ func repeat(s string, n int) string {
 // 空字段会显示成一行残缺的列表。
 func TestEveryPluginHasCompleteMetadata(t *testing.T) {
 	metas := List()
-	if len(metas) != 13 {
+	if len(metas) != 14 {
 		t.Fatalf("registry holds %d plugins, want 10", len(metas))
 	}
 	seen := map[string]bool{}
