@@ -214,6 +214,7 @@ Every plugin runs against every file in the SKILL directory; hits marked **LLM-v
 | Plugin | Detects | Default severity | LLM-verified |
 |---|---|---|---|
 | `base64_exec` | A Base64-decoded command piped into a shell | critical | yes |
+| `remote_script_exec` | Download-and-execute signatures — `curl` / `wget` piped into a shell, PowerShell downloads piped into `iex` | critical | yes |
 | `reverse_shell` | Reverse-shell patterns — `/dev/tcp`, `nc -e`, `socat exec:` | critical | yes |
 | `binary_file` | Binary files inside the SKILL directory | high | no |
 | `consecutive_newlines` | Runs of 30+ consecutive newlines hiding content | high | no |

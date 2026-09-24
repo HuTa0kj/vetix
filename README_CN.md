@@ -214,6 +214,7 @@ docker compose run --rm vetix -s /skills/xxx
 | 插件 | 检测内容 | 默认严重度 | LLM 复核 |
 |---|---|---|---|
 | `base64_exec` | Base64 解码后经管道送入 Shell 的命令 | critical | 是 |
+| `remote_script_exec` | 下载即执行——`curl` / `wget` 经管道送入 Shell、PowerShell 下载管道进 `iex` | critical | 是 |
 | `reverse_shell` | 反弹 Shell 特征——`/dev/tcp`、`nc -e`、`socat exec:` | critical | 是 |
 | `binary_file` | SKILL 目录中的二进制文件 | high | 否 |
 | `consecutive_newlines` | 30 个以上连续换行隐藏内容 | high | 否 |

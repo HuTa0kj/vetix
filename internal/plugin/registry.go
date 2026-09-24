@@ -16,6 +16,7 @@ func init() {
 	Register(PublicIPCheckPlugin{})
 	Register(RareFileCheckPlugin{})
 	Register(ReflectiveCallCheckPlugin{})
+	Register(RemoteScriptExecCheckPlugin{})
 	Register(ReverseShellPlugin{})
 	Register(TyposquattingCheckPlugin{})
 	Register(UnicodeConfusablesCheckPlugin{})
